@@ -249,18 +249,26 @@
 
 <script>
 // ==========================================
-// 1. SUPABASE CONFIGURATION (REPLACE WITH YOURS)
+// 1. SUPABASE CONFIGURATION (FIXED VARIABLE NAME)
 // ==========================================
 const SUPABASE_URL = 'https://vbbbwexxcctljhdavgnz.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiYmJ3ZXh4Y2N0bGpoZGF2Z256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTAxODYsImV4cCI6MjA4ODQ2NjE4Nn0.PYIkE2qrzkKUcVm0KVzx3f2ZsCtuhDOH3BY06rjdy08';
 
-const supabase = supabaseClient.createClient(SUPABASE_URL, SUPABASE_KEY);
+// កែឈ្មោះទៅជា 'sb' ដើម្បីកុំឲ្យជាន់គ្នាជាមួយ Library global 'supabase'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let userProfile = null;
 let currentVersionId = null; 
 
-const DEFAULT_SUBJECTS = [{id:'S1',name:'គណិតវិទ្យា',code:'MATH',color:'hsl(0,70%,45%)'},{id:'S2',name:'រូបវិទ្យា',code:'PHYS',color:'hsl(35,70%,45%)'},{id:'S3',name:'គីមីវិទ្យា',code:'CHEM',color:'hsl(70,70%,45%)'},{id:'S4',name:'ជីវវិទ្យា',code:'BIO',color:'hsl(105,70%,45%)'},{id:'S5',name:'ភាសាខ្មែរ',code:'KHM',color:'hsl(140,70%,45%)'}];
+const DEFAULT_SUBJECTS = [
+    {id:'S1',name:'គណិតវិទ្យា',code:'MATH',color:'hsl(0,70%,45%)'},
+    {id:'S2',name:'រូបវិទ្យា',code:'PHYS',color:'hsl(35,70%,45%)'},
+    {id:'S3',name:'គីមីវិទ្យា',code:'CHEM',color:'hsl(70,70%,45%)'},
+    {id:'S4',name:'ជីវវិទ្យា',code:'BIO',color:'hsl(105,70%,45%)'},
+    {id:'S5',name:'ភាសាខ្មែរ',code:'KHM',color:'hsl(140,70%,45%)'}
+];
+
 let state = {
     schoolInfo: { department:'មន្ទីរអប់រំ យុវជន និងកីឡា', schoolName:'វិទ្យាល័យ...', principalName:'នាយកសាលា', academicYear:'២០២៤-២០២៥', logo:'', signature:'' },
     timeSlots: ["7-8","8-9","9-10","10-11","11-12","1-2","2-3","3-4","4-5"],
@@ -268,52 +276,55 @@ let state = {
     subjects: JSON.parse(JSON.stringify(DEFAULT_SUBJECTS)),
     subjectRules: {}, teachers: [], assignments: [], schedule: {}, activeTid: null, activeSubjId: null,
 };
+
 const DAYS = [{id:'mon',name:'ចន្ទ'},{id:'tue',name:'អង្គារ'},{id:'wed',name:'ពុធ'},{id:'thu',name:'ព្រហស្បតិ៍'},{id:'fri',name:'សុក្រ'},{id:'sat',name:'សៅរ៍'}];
 
 function getGrade(cls) { let m = cls.match(/\d+/); return m ? 'g'+m[0] : 'g12'; }
-function saveLocal() { /* Replaced by Cloud Sync, but keeps UI state updated */ }
 
 // ==========================================
 // 2. AUTHENTICATION & INITIALIZATION
 // ==========================================
 async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await sb.auth.getSession();
     if(session) { currentUser = session.user; await fetchProfileAndInitialize(); } 
     else { document.getElementById('auth-screen').classList.remove('hidden'); }
 }
 
 async function handleAuth(type) {
-    const email = document.getElementById('auth-email').value; const password = document.getElementById('auth-pass').value;
+    const email = document.getElementById('auth-email').value; 
+    const password = document.getElementById('auth-pass').value;
     if(!email || !password) return Swal.fire('បញ្ហា', 'សូមវាយបញ្ចូល Email និង Password', 'warning');
     
     document.getElementById('btn-login').innerText = 'កំពុងដំណើរការ...';
     let result;
-    if(type === 'login') result = await supabase.auth.signInWithPassword({ email, password });
-    else result = await supabase.auth.signUp({ email, password }); // Supabase triggers will create profile
+    if(type === 'login') result = await sb.auth.signInWithPassword({ email, password });
+    else result = await sb.auth.signUp({ email, password });
     
     if(result.error) {
         Swal.fire('បរាជ័យ', result.error.message, 'error');
         document.getElementById('btn-login').innerText = 'ចូលប្រព័ន្ធ (Login)';
     } else {
-        if(type==='signup') Swal.fire('ជោគជ័យ', 'ចុះឈ្មោះរួចរាល់ សូមឲ្យ Owner ផ្ដល់សិទ្ធិឲ្យអ្នកដើម្បីប្រើប្រាស់!', 'info');
-        else { currentUser = result.data.user; await fetchProfileAndInitialize(); }
+        if(type==='signup') {
+            Swal.fire('ជោគជ័យ', 'ចុះឈ្មោះរួចរាល់ សូមឲ្យ Owner ផ្ដល់សិទ្ធិឲ្យអ្នកដើម្បីប្រើប្រាស់!', 'info');
+            document.getElementById('btn-login').innerText = 'ចូលប្រព័ន្ធ (Login)';
+        } else { 
+            currentUser = result.data.user; 
+            await fetchProfileAndInitialize(); 
+        }
     }
 }
 
-async function handleLogout() { await supabase.auth.signOut(); location.reload(); }
+async function handleLogout() { await sb.auth.signOut(); location.reload(); }
 
 async function fetchProfileAndInitialize() {
-    // Fetch user profile to know their role and school_id
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+    if(!profile) return Swal.fire('Error', 'Profile not found. Please wait for owner to approve.', 'error');
     
-    if(!profile) return Swal.fire('Error', 'Profile not found. Please contact admin.', 'error');
     userProfile = profile;
-    
     document.getElementById('user-info').innerText = `${profile.email} (${profile.role.toUpperCase()})`;
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app-wrapper').classList.remove('hidden');
 
-    // SETUP TABS BASED ON ROLE
     const allTabs = [
         { id: 'master', label: 'តារាងរួម', role: ['owner', 'admin', 'user'] },
         { id: 'teachers-tab', label: 'បញ្ជីគ្រូ', role: ['owner', 'admin'] },
@@ -330,7 +341,6 @@ async function fetchProfileAndInitialize() {
     });
     document.getElementById('nav-tabs-container').innerHTML = navHtml;
 
-    // LOAD DATA OR SHOW OWNER DASHBOARD
     if(profile.role === 'owner' && !profile.school_id) {
         changeTab('owner-panel');
         loadOwnerData();
@@ -348,7 +358,13 @@ function changeTab(id) {
     const target = document.getElementById(id); if(target) target.classList.remove('hidden');
     document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-white/50');
     const btn = document.getElementById('tab-'+id); if(btn) btn.className = 'tab-btn active-tab px-4 py-2 rounded-lg text-sm font-bold bg-white shadow text-blue-600';
-    if(id==='master') renderMasterGrid(); if(id==='teachers-tab') renderTeachersTab(); if(id==='assignments') renderAssignments(); if(id==='settings') renderSettings(); if(id==='individual') renderIndividualDropdown(); if(id==='data') loadVersionsHistory(); if(id==='owner-panel') loadOwnerData();
+    if(id==='master') renderMasterGrid(); 
+    if(id==='teachers-tab') renderTeachersTab(); 
+    if(id==='assignments') renderAssignments(); 
+    if(id==='settings') renderSettings(); 
+    if(id==='individual') renderIndividualDropdown(); 
+    if(id==='data') loadVersionsHistory(); 
+    if(id==='owner-panel') loadOwnerData();
     lucide.createIcons();
 }
 
@@ -357,12 +373,10 @@ function changeTab(id) {
 // ==========================================
 async function loadLatestVersion() {
     if(!userProfile.school_id) return;
-    const { data: versions, error } = await supabase.from('schedule_versions').select('*').eq('school_id', userProfile.school_id).order('created_at', { ascending: false }).limit(1);
+    const { data: versions } = await sb.from('schedule_versions').select('*').eq('school_id', userProfile.school_id).order('created_at', { ascending: false }).limit(1);
     
-    if(versions && versions.length > 0) {
-        applyVersion(versions[0]);
-    } else {
-        // Init empty for school
+    if(versions && versions.length > 0) applyVersion(versions[0]);
+    else {
         state.schoolInfo.schoolName = "សាលាថ្មី (មិនទាន់ Save)";
         document.getElementById('nav-school').innerText = '| ' + state.schoolInfo.schoolName;
         renderSettings();
@@ -375,25 +389,19 @@ function applyVersion(vData) {
     document.getElementById('current-version-display').innerText = vData.version_name;
     document.getElementById('current-version-display').className = "text-green-600 font-bold";
     document.getElementById('nav-school').innerText = '| ' + state.schoolInfo.schoolName;
-    renderMasterGrid();
-    renderSettings();
+    renderMasterGrid(); renderSettings();
 }
 
 async function saveVersionToCloud() {
     if(!userProfile.school_id) return Swal.fire('Error', 'No school assigned', 'error');
     const vName = document.getElementById('v-name').value;
     const vDate = document.getElementById('v-date').value;
-    
-    if(!vName || !vDate) return Swal.fire('បញ្ហា', 'សូមបំពេញឈ្មោះ Version និងកាលបរិច្ឆេទឲ្យបានត្រឹមត្រូវ', 'warning');
+    if(!vName || !vDate) return Swal.fire('បញ្ហា', 'សូមបំពេញឈ្មោះ Version និងកាលបរិច្ឆេទ', 'warning');
     
     Swal.fire({ title: 'កំពុង Save...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     
-    const { data, error } = await supabase.from('schedule_versions').insert([{
-        school_id: userProfile.school_id,
-        version_name: vName,
-        effective_date: vDate,
-        data: state,
-        created_by: currentUser.id
+    const { data, error } = await sb.from('schedule_versions').insert([{
+        school_id: userProfile.school_id, version_name: vName, effective_date: vDate, data: state, created_by: currentUser.id
     }]).select();
 
     if(error) Swal.fire('បរាជ័យ', error.message, 'error');
@@ -401,7 +409,7 @@ async function saveVersionToCloud() {
         currentVersionId = data[0].id;
         document.getElementById('current-version-display').innerText = vName;
         document.getElementById('current-version-display').className = "text-green-600 font-bold";
-        Swal.fire('ជោគជ័យ', 'Version ថ្មីត្រូវបានរក្សាទុកលើ Cloud', 'success');
+        Swal.fire('ជោគជ័យ', 'រក្សាទុករួចរាល់', 'success');
         document.getElementById('v-name').value = '';
         loadVersionsHistory();
     }
@@ -409,112 +417,195 @@ async function saveVersionToCloud() {
 
 async function loadVersionsHistory() {
     if(!userProfile.school_id) return;
-    const { data, error } = await supabase.from('schedule_versions').select('id, version_name, effective_date, created_at').eq('school_id', userProfile.school_id).order('created_at', { ascending: false });
-    
+    const { data } = await sb.from('schedule_versions').select('id, version_name, effective_date, created_at').eq('school_id', userProfile.school_id).order('created_at', { ascending: false });
     if(data) {
         document.getElementById('versions-list').innerHTML = data.map(v => `
             <div class="flex items-center justify-between p-4 bg-slate-50 border rounded-2xl ${v.id === currentVersionId ? 'border-blue-500 shadow-md ring-1 ring-blue-200' : 'border-slate-100'}">
-                <div>
-                    <h4 class="font-bold text-blue-900">${v.version_name}</h4>
-                    <p class="text-xs text-slate-500 mt-1">ចាប់អនុវត្ត: ${v.effective_date} | បាន Save ថ្ងៃ: ${new Date(v.created_at).toLocaleDateString()}</p>
-                </div>
-                <button onclick="restoreSpecificVersion('${v.id}')" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-200 transition-all">Load យកមកប្រើ</button>
-            </div>
-        `).join('');
+                <div><h4 class="font-bold text-blue-900">${v.version_name}</h4><p class="text-xs text-slate-500 mt-1">អនុវត្ត: ${v.effective_date} | Save: ${new Date(v.created_at).toLocaleDateString()}</p></div>
+                <button onclick="restoreSpecificVersion('${v.id}')" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-200">Load ប្រើ</button>
+            </div>`).join('');
     }
 }
 
 async function restoreSpecificVersion(id) {
     Swal.fire({ title: 'កំពុងទាញយក...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const { data, error } = await supabase.from('schedule_versions').select('*').eq('id', id).single();
-    if(data) {
-        applyVersion(data);
-        Swal.fire('ជោគជ័យ', `បាន Load កាលវិភាគ: ${data.version_name}`, 'success');
-        loadVersionsHistory();
-    }
+    const { data } = await sb.from('schedule_versions').select('*').eq('id', id).single();
+    if(data) { applyVersion(data); Swal.fire('ជោគជ័យ', `បាន Load: ${data.version_name}`, 'success'); loadVersionsHistory(); }
 }
 
 // ==========================================
 // 4. OWNER PANEL LOGIC
 // ==========================================
 let allSchoolsCache = [];
-
 async function loadOwnerData() {
-    // Load Schools
-    const { data: schools } = await supabase.from('schools').select('*').order('created_at', { ascending: false });
+    const { data: schools } = await sb.from('schools').select('*').order('created_at', { ascending: false });
     allSchoolsCache = schools || [];
-    document.getElementById('owner-school-list').innerHTML = (schools||[]).map(s => `
-        <div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center">
-            <span class="font-bold text-sm text-blue-900">${s.name} <br><span class="text-[10px] text-slate-400 font-mono">${s.id}</span></span>
-        </div>
-    `).join('');
+    document.getElementById('owner-school-list').innerHTML = allSchoolsCache.map(s => `<div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center"><span class="font-bold text-sm text-blue-900">${s.name} <br><span class="text-[10px] text-slate-400 font-mono">${s.id}</span></span></div>`).join('');
 
-    // Load Users (Profiles)
-    const { data: profiles } = await supabase.from('profiles').select('*, schools(name)').neq('role', 'owner');
-    
-    const schoolOptions = allSchoolsCache.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-    
+    const { data: profiles } = await sb.from('profiles').select('*, schools(name)').neq('role', 'owner');
     document.getElementById('owner-user-list').innerHTML = (profiles||[]).map(p => `
         <div class="p-4 bg-slate-50 border rounded-xl space-y-2">
-            <div class="flex justify-between items-center border-b pb-2">
-                <span class="font-bold text-sm text-slate-800">${p.email}</span>
-                <span class="text-xs font-bold px-2 py-1 rounded bg-${p.role==='admin'?'green':'slate'}-100 text-${p.role==='admin'?'green':'slate'}-700 uppercase">${p.role}</span>
-            </div>
+            <div class="flex justify-between items-center border-b pb-2"><span class="font-bold text-sm text-slate-800">${p.email}</span><span class="text-xs font-bold px-2 py-1 rounded bg-${p.role==='admin'?'green':'slate'}-100 text-${p.role==='admin'?'green':'slate'}-700 uppercase">${p.role}</span></div>
             <div class="flex gap-2 items-end">
-                <div class="flex-1">
-                    <label class="text-[10px] font-bold text-slate-400">សាលារៀន</label>
-                    <select id="sel-school-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none">
-                        <option value="">-- មិនទាន់មានសាលា --</option>
-                        ${allSchoolsCache.map(s => `<option value="${s.id}" ${s.id===p.school_id?'selected':''}>${s.name}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="w-24">
-                    <label class="text-[10px] font-bold text-slate-400">តួនាទី</label>
-                    <select id="sel-role-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none">
-                        <option value="user" ${p.role==='user'?'selected':''}>User</option>
-                        <option value="admin" ${p.role==='admin'?'selected':''}>Admin</option>
-                    </select>
-                </div>
-                <button onclick="updateUserRole('${p.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm">Save</button>
+                <div class="flex-1"><label class="text-[10px] font-bold text-slate-400">សាលារៀន</label><select id="sel-school-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="">-- អត់ទាន់មានសាលា --</option>${allSchoolsCache.map(s => `<option value="${s.id}" ${s.id===p.school_id?'selected':''}>${s.name}</option>`).join('')}</select></div>
+                <div class="w-24"><label class="text-[10px] font-bold text-slate-400">តួនាទី</label><select id="sel-role-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="user" ${p.role==='user'?'selected':''}>User</option><option value="admin" ${p.role==='admin'?'selected':''}>Admin</option></select></div>
+                <button onclick="updateUserRole('${p.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Save</button>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
-
 async function createSchool() {
     const { value: name } = await Swal.fire({ title: 'ឈ្មោះសាលាថ្មី', input: 'text', showCancelButton: true });
-    if(name) {
-        await supabase.from('schools').insert([{ name }]);
-        loadOwnerData();
-    }
+    if(name) { await sb.from('schools').insert([{ name }]); loadOwnerData(); }
+}
+async function updateUserRole(pId) {
+    const sId = document.getElementById(`sel-school-${pId}`).value; const role = document.getElementById(`sel-role-${pId}`).value;
+    await sb.from('profiles').update({ role: role, school_id: sId || null }).eq('id', pId);
+    Swal.fire({toast:true, position:'top-end', icon:'success', title:'បានកែប្រែ', showConfirmButton:false, timer:1500}); loadOwnerData();
 }
 
-async function updateUserRole(profileId) {
-    const schoolId = document.getElementById(`sel-school-${profileId}`).value;
-    const role = document.getElementById(`sel-role-${profileId}`).value;
-    const updateData = { role: role };
-    if(schoolId) updateData.school_id = schoolId; else updateData.school_id = null;
+// ==========================================
+// 5. FULL UI LOGIC (Excel, Drag/Drop, Renders)
+// ==========================================
+
+// --- Settings & Subjects ---
+function renderSettings() {
+    document.getElementById('info-dept').value = state.schoolInfo.department; document.getElementById('info-school').value = state.schoolInfo.schoolName; document.getElementById('info-year').value = state.schoolInfo.academicYear; document.getElementById('info-principal').value = state.schoolInfo.principalName; document.getElementById('classes-input').value = state.classes.join(', ');
+    if(state.schoolInfo.logo) { document.getElementById('preview-logo').src = state.schoolInfo.logo; document.getElementById('preview-logo').classList.remove('hidden'); }
+    if(state.schoolInfo.signature) { document.getElementById('preview-signature').src = state.schoolInfo.signature; document.getElementById('preview-signature').classList.remove('hidden'); }
+    document.getElementById('time-slots-container').innerHTML = state.timeSlots.map((ts, i) => `<div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 w-4">${i+1}</span><input value="${ts}" onchange="updateTimeSlot(${i}, this.value)" class="flex-1 p-2 border rounded-lg text-sm font-bold outline-none"></div>`).join('');
     
-    await supabase.from('profiles').update(updateData).eq('id', profileId);
-    Swal.fire({toast:true, position:'top-end', icon:'success', title:'បានកែប្រែសិទ្ធិ', showConfirmButton:false, timer:1500});
-    loadOwnerData();
+    document.getElementById('subject-manage-list').innerHTML = state.subjects.map(s => `<div class="grid grid-cols-12 gap-2 items-center bg-slate-50 p-1.5 rounded border"><div class="col-span-6"><input value="${s.name}" onchange="updateSubject('${s.id}', 'name', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold"></div><div class="col-span-4"><input value="${s.code}" onchange="updateSubject('${s.id}', 'code', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold text-center text-blue-600 uppercase"></div><div class="col-span-2 text-center"><button onclick="removeSubject('${s.id}')" class="text-red-400 hover:text-red-600 bg-white p-1 rounded border"><i data-lucide="trash" class="w-3 h-3"></i></button></div></div>`).join('');
+
+    let rulesHtml = `<thead><tr class="bg-slate-100 font-moul text-[9px] uppercase"><th class="p-2 border text-left min-w-[80px]">មុខវិជ្ជា (កូដ)</th>${[7,8,9,10,11,12].map(g=>`<th class="p-2 border">ទី${g}</th>`).join('')}</tr></thead><tbody>`;
+    state.subjects.forEach(s => {
+        rulesHtml += `<tr><td class="p-1 border font-bold text-blue-700 bg-slate-50 text-[10px]">${s.name} (${s.code})</td>`;
+        [7,8,9,10,11,12].map(g => { const val = state.subjectRules[s.name] ? state.subjectRules[s.name]['g'+g] : 0; rulesHtml += `<td class="p-0 border"><input type="number" value="${val||0}" onchange="updateRule('${s.name}', 'g${g}', this.value)" class="w-full p-1 text-center outline-none bg-transparent font-bold text-xs text-blue-600"></td>`; });
+        rulesHtml += `</tr>`;
+    });
+    document.getElementById('rules-table').innerHTML = rulesHtml + `</tbody>`;
+    lucide.createIcons();
 }
 
-// ==========================================
-// 5. REST OF LOGIC (UI renders, identical to previous robust implementation)
-// ==========================================
-// Keep exactly the same logic for renderMasterGrid, renderAssignments, renderSettings, Excel Exports/Imports, DragDrop, etc.
-// Since the instruction was clear to preserve all that, they are logically intact.
-// Re-inserting the large generic UI functions below to ensure the file runs cleanly:
+function updateInfo(k, v) { state.schoolInfo[k] = v; if(k==='schoolName') document.getElementById('nav-school').innerText = '| ' + v; }
+function updateClasses(v) { state.classes = v.split(',').map(s=>s.trim()).filter(Boolean); }
+function updateTimeSlot(i, v) { state.timeSlots[i] = v; }
+function uploadImage(e, type) { const f = e.target.files[0]; if(f) { const r = new FileReader(); r.onload = (ev) => { state.schoolInfo[type] = ev.target.result; renderSettings(); }; r.readAsDataURL(f); } }
+function addSubjectBlank() { state.subjects.push({ id:'S'+Date.now(), name:'ថ្មី', code:'NEW', color:`hsl(${Math.random()*360}, 70%, 45%)` }); renderSettings(); }
+function updateSubject(id, key, val) { let s = state.subjects.find(x => x.id === id); if(s) { s[key] = val; renderSettings(); } }
+function removeSubject(id) { state.subjects = state.subjects.filter(s => s.id !== id); state.teachers.forEach(t => { if(t.subjectIds) t.subjectIds = t.subjectIds.filter(sid => sid !== id); }); state.assignments = state.assignments.filter(a => a.subjId !== id); for(let k in state.schedule) { if(!state.assignments.find(a=>a.id == state.schedule[k])) delete state.schedule[k]; } renderSettings(); }
+function updateRule(s, g, v) { if(!state.subjectRules[s]) state.subjectRules[s] = {}; state.subjectRules[s][g] = parseInt(v) || 0; }
 
-function renderTeachersTab() { document.getElementById('teacher-manage-list').innerHTML = state.teachers.map(t => `<div class="bg-slate-50 p-4 rounded-2xl border space-y-3"><div class="flex justify-between items-start"><input value="${t.name}" onchange="updateTeacher('${t.id}', 'name', this.value)" class="font-bold text-sm bg-transparent border-b outline-none w-2/3"><button onclick="removeTeacher('${t.id}')" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div><div><span class="text-[9px] uppercase">មុខវិជ្ជា:</span><div class="flex flex-wrap gap-1">${state.subjects.map(s=>`<label class="flex items-center gap-1 text-[10px] bg-white p-1 border rounded"><input type="checkbox" ${t.subjectIds?.includes(s.id)?'checked':''} onchange="updateTeacherSubject('${t.id}', '${s.id}', this.checked)"> ${s.code}</label>`).join('')}</div></div><div><span class="text-[9px] uppercase">ថ្ងៃ:</span><div class="flex flex-wrap gap-1">${DAYS.map(d=>`<button onclick="toggleDay('${t.id}', '${d.id}')" class="px-1.5 py-1 rounded text-[9px] ${t.availableDays.includes(d.id)?'bg-blue-600 text-white':'bg-white border text-slate-400'}">${d.name}</button>`).join('')}</div></div></div>`).join(''); lucide.createIcons(); }
+// --- Teachers Tab & Excel ---
+function renderTeachersTab() { 
+    document.getElementById('teacher-manage-list').innerHTML = state.teachers.map(t => {
+        const subjHtml = state.subjects.map(s => `<label class="flex items-center gap-1 text-[10px] font-bold bg-white p-1 border rounded cursor-pointer"><input type="checkbox" ${t.subjectIds?.includes(s.id)?'checked':''} onchange="updateTeacherSubject('${t.id}', '${s.id}', this.checked)"> ${s.code}</label>`).join('');
+        return `<div class="bg-slate-50 p-4 rounded-2xl border shadow-sm space-y-3"><div class="flex justify-between items-start"><input value="${t.name}" onchange="updateTeacher('${t.id}', 'name', this.value)" class="font-bold text-sm text-blue-900 bg-transparent border-b border-slate-300 outline-none w-2/3"><button onclick="removeTeacher('${t.id}')" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded-lg shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">មុខវិជ្ជា:</span><div class="flex flex-wrap gap-1 mt-1">${subjHtml}</div></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">ថ្ងៃ:</span><div class="flex flex-wrap gap-1 mt-1">${DAYS.map(d => `<button onclick="toggleDay('${t.id}', '${d.id}')" class="px-1.5 py-1 rounded text-[9px] font-bold ${t.availableDays.includes(d.id)?'bg-blue-600 text-white':'bg-white border text-slate-400'}">${d.name}</button>`).join('')}</div></div><div class="grid grid-cols-2 gap-1 p-2 bg-white border rounded-xl text-[9px]"><div class="flex justify-between items-center"><label><input type="checkbox" ${t.isHomeroom?'checked':''} onchange="updateTeacher('${t.id}', 'isHomeroom', this.checked)"> បន្ទុកថ្នាក់:</label><input type="number" value="${t.homeroomHours||4}" onchange="updateTeacher('${t.id}', 'homeroomHours', this.value)" class="w-8 border rounded text-center"></div><div class="flex justify-between items-center"><label>កម្រិត(+h):</label><input type="number" value="${t.multiLevelBonus||0}" onchange="updateTeacher('${t.id}', 'multiLevelBonus', parseInt(this.value))" class="w-8 border rounded text-center"></div><div class="col-span-2 flex justify-between items-center pt-1 border-t"><label><input type="checkbox" ${t.isTechLead?'checked':''} onchange="updateTeacher('${t.id}', 'isTechLead', this.checked)"> ប្រធានបច្ចេកទេស</label><select onchange="updateTeacher('${t.id}', 'baseMode', this.value)" class="outline-none bg-slate-100 rounded p-0.5"><option value="auto" ${t.baseMode==='auto'?'selected':''}>Auto</option><option value="none" ${t.baseMode==='none'?'selected':''}>គ្មាន</option></select></div></div></div>`
+    }).join(''); 
+    lucide.createIcons(); 
+}
 function updateTeacher(id, k, v) { let t = state.teachers.find(x=>x.id===id); t[k]=v; }
 function updateTeacherSubject(tid, sid, isChecked) { let t = state.teachers.find(x=>x.id===tid); if(!t.subjectIds) t.subjectIds = []; if(isChecked && !t.subjectIds.includes(sid)) t.subjectIds.push(sid); if(!isChecked) t.subjectIds = t.subjectIds.filter(id => id !== sid); }
 function addTeacherBlank() { state.teachers.unshift({ id:'T'+Date.now(), name:'គ្រូថ្មី', availableDays: DAYS.map(d=>d.id), subjectIds: [], isHomeroom:false, homeroomHours:4, isTechLead:false, baseMode:'auto' }); renderTeachersTab(); }
 function removeTeacher(id) { state.teachers = state.teachers.filter(t=>t.id!==id); state.assignments = state.assignments.filter(a=>a.tId!==id); for(let k in state.schedule) if(!state.assignments.find(a=>a.id == state.schedule[k])) delete state.schedule[k]; renderTeachersTab(); }
 function toggleDay(tid, did) { let t = state.teachers.find(x=>x.id===tid); if(t.availableDays.includes(did)) t.availableDays = t.availableDays.filter(d=>d!==did); else t.availableDays.push(did); renderTeachersTab(); }
 
-// Render Master Grid
+function exportTeachersExcel() {
+    const data = state.teachers.length ? state.teachers.map(t => ({ 'ឈ្មោះគ្រូ (Name)': t.name, 'កូដមុខវិជ្ជា (Subject Codes)': t.subjectIds.map(id => state.subjects.find(s=>s.id===id)?.code).join(','), 'ថ្ងៃបង្រៀន (Days)': t.availableDays.map(id => DAYS.find(d=>d.id===id)?.name).join(','), 'ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)': t.homeroomHours || 0, 'ម៉ោងច្រើនកម្រិត (Level hrs)': t.multiLevelBonus || 0, 'ប្រធានបច្ចេកទេស (Tech Lead)': t.isTechLead ? 'បាទ' : 'ទេ', 'កាតព្វកិច្ច (Duty)': t.baseMode === 'auto' ? 'Auto' : 'None' })) : [{ 'ឈ្មោះគ្រូ (Name)': 'ឧទាហរណ៍៖ សុខ សាន្ត', 'កូដមុខវិជ្ជា (Subject Codes)': 'MATH, PHYS', 'ថ្ងៃបង្រៀន (Days)': 'ចន្ទ, អង្គារ, ពុធ, ព្រហស្បតិ៍, សុក្រ', 'ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)': 4, 'ម៉ោងច្រើនកម្រិត (Level hrs)': 0, 'ប្រធានបច្ចេកទេស (Tech Lead)': 'ទេ', 'កាតព្វកិច្ច (Duty)': 'Auto' }];
+    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 30}, {wch: 35}, {wch: 25}, {wch: 25}, {wch: 25}, {wch: 25}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Teachers Data"); XLSX.writeFile(wb, "Teachers_Full_Data.xlsx");
+}
+function importTeachersExcel(e) {
+    const file = e.target.files[0]; if(!file) return; const r = new FileReader();
+    r.onload = function(evt) {
+        try {
+            const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0;
+            rows.forEach((r, idx) => {
+                const tName = r['ឈ្មោះគ្រូ (Name)'];
+                if(tName && typeof tName === 'string' && !tName.includes('ឧទាហរណ៍')) {
+                    let sIds = []; if(r['កូដមុខវិជ្ជា (Subject Codes)']) { r['កូដមុខវិជ្ជា (Subject Codes)'].toString().split(',').map(s=>s.trim().toUpperCase()).forEach(sc => { const found = state.subjects.find(s=>s.code.toUpperCase() === sc); if(found) sIds.push(found.id); }); }
+                    let dIds = []; if(r['ថ្ងៃបង្រៀន (Days)']) { r['ថ្ងៃបង្រៀន (Days)'].toString().split(',').map(d=>d.trim()).forEach(dn => { const found = DAYS.find(d=>d.name === dn); if(found) dIds.push(found.id); }); }
+                    if(dIds.length === 0) dIds = DAYS.map(d=>d.id);
+                    let tObj = state.teachers.find(t=>t.name === tName.trim());
+                    if(!tObj) { tObj = { id:'T'+Date.now()+idx, name: tName.trim() }; state.teachers.push(tObj); }
+                    tObj.subjectIds = sIds; tObj.availableDays = dIds; tObj.homeroomHours = parseInt(r['ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)']) || 0; tObj.isHomeroom = tObj.homeroomHours > 0; tObj.multiLevelBonus = parseInt(r['ម៉ោងច្រើនកម្រិត (Level hrs)']) || 0; tObj.isTechLead = r['ប្រធានបច្ចេកទេស (Tech Lead)'] === 'បាទ'; tObj.baseMode = r['កាតព្វកិច្ច (Duty)'] === 'None' ? 'none' : 'auto'; c++;
+                }
+            });
+            if(c>0) { renderTeachersTab(); Swal.fire('ជោគជ័យ', `ទាញចូលគ្រូបាន ${c} នាក់`, 'success'); } else Swal.fire('បរាជ័យ', 'ទម្រង់ Excel ខុស', 'error');
+        } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហាអាន File', 'error'); }
+    }; r.readAsBinaryString(file); e.target.value = '';
+}
+
+// --- Assignments Tab & Excel ---
+function renderAssignments() {
+    const tid = state.activeTid || (state.teachers[0]?.id);
+    document.getElementById('teacher-quick-list').innerHTML = state.teachers.map(t => `<button onclick="setAssignTeacher('${t.id}')" class="text-left px-2 py-1.5 rounded-lg border text-[11px] font-bold truncate ${tid===t.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}">${t.name}</button>`).join('') || '<div class="text-xs text-red-500 col-span-2">សូមបន្ថែមគ្រូសិន</div>';
+    const t = state.teachers.find(x => x.id === tid); const sList = document.getElementById('selSubject');
+    if(t && t.subjectIds && t.subjectIds.length > 0) {
+        state.activeSubjId = state.activeSubjId && t.subjectIds.includes(state.activeSubjId) ? state.activeSubjId : t.subjectIds[0];
+        sList.innerHTML = t.subjectIds.map(sid => { const sObj = state.subjects.find(s => s.id === sid); return sObj ? `<option value="${sid}" ${state.activeSubjId===sid?'selected':''}>${sObj.name} (${sObj.code})</option>` : ''; }).join('');
+    } else { sList.innerHTML = '<option value="">(គ្មានមុខវិជ្ជា)</option>'; state.activeSubjId = null; }
+    document.getElementById('class-checks').innerHTML = state.classes.map(c => `<label class="flex items-center gap-1.5 bg-white p-1.5 border rounded-lg cursor-pointer text-[10px] font-bold hover:bg-blue-50"><input type="checkbox" name="c-check" value="${c}" onchange="autoFillHours()"> ${c}</label>`).join('');
+    document.getElementById('teacher-load-list').innerHTML = state.teachers.map(tc => {
+        const load = calculateTeacherLoad(tc); const tAss = state.assignments.filter(a => a.tId === tc.id); let assHtml = '';
+        if(tc.subjectIds) { tc.subjectIds.forEach(sid => { const sObj = state.subjects.find(s => s.id === sid); const sAss = tAss.filter(a => a.subjId === sid); if(sAss.length > 0) { assHtml += `<div class="mb-2 border-l-2 border-slate-400 bg-white p-2 rounded-r-lg shadow-sm"><div class="text-[10px] font-bold text-slate-500 mb-1">${sObj?.name} (${sObj?.code})</div><div class="flex flex-wrap gap-1.5">${sAss.map(a => `<div class="bg-slate-50 border px-2 py-1 rounded text-[10px] flex items-center gap-1"><span class="font-bold text-red-600">${a.className}</span><span class="text-slate-600 bg-slate-200 px-1 rounded">${a.hours}h</span><button onclick="removeAssignment(${a.id})" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('')}</div></div>`; } }); }
+        return `<div class="bg-slate-100 p-4 rounded-2xl border flex flex-col md:flex-row gap-4"><div class="md:w-56 border-r pr-4"><div class="font-bold text-sm text-slate-800">${tc.name}</div><div class="grid grid-cols-2 gap-y-1 mt-2 text-[10px]"><span class="text-slate-500">បង្រៀន:</span><span class="font-bold text-right">${load.assignedHours} h</span><span class="text-slate-500">បន្ថែម:</span><span class="font-bold text-right text-green-600">+${load.reduction} h</span><span class="text-slate-500">កាតព្វកិច្ច:</span><span class="font-bold text-right">${load.base === 999 ? 'គ្មាន' : load.base + ' h'}</span></div><div class="mt-2 pt-2 border-t flex justify-between"><span class="text-[10px] font-bold text-slate-500">ម៉ោងលើស:</span><span class="text-lg font-bold ${load.overtime > 0 ? 'text-red-600' : 'text-slate-400'}">${load.overtime > 0 ? load.overtime : 0}</span></div></div><div class="flex-1 flex flex-col gap-1">${assHtml || '<p class="text-[10px] italic">មិនទាន់មានចាត់តាំង...</p>'}</div></div>`;
+    }).join(''); lucide.createIcons();
+}
+
+function setAssignTeacher(id) { state.activeTid = id; renderAssignments(); }
+function autoFillHours() {
+    const sid = document.getElementById('selSubject').value; const sObj = state.subjects.find(s=>s.id===sid);
+    const checked = Array.from(document.querySelectorAll('input[name="c-check"]:checked')).map(e=>e.value);
+    if(checked.length > 0 && sObj) {
+        const grade = getGrade(checked[0]); let h = state.subjectRules[sObj.name] ? state.subjectRules[sObj.name][grade] : 2;
+        document.getElementById('inpHours').value = h; document.getElementById('inpMax').value = (h >= 3) ? 2 : 1;
+    }
+}
+function bulkAdd() {
+    const tid = state.activeTid; const sid = document.getElementById('selSubject').value;
+    const checked = Array.from(document.querySelectorAll('input[name="c-check"]:checked')).map(e=>e.value);
+    const h = parseInt(document.getElementById('inpHours').value); const m = parseInt(document.getElementById('inpMax').value);
+    if(!tid || !sid || checked.length===0 || isNaN(h) || isNaN(m)) return Swal.fire('ខ្វះព័ត៌មាន', 'សូមបំពេញឲ្យគ្រប់គ្រាន់', 'warning'); 
+    checked.forEach(cls => { state.assignments = state.assignments.filter(a => !(a.tId===tid && a.subjId===sid && a.className===cls)); state.assignments.push({ id: Date.now()+Math.random(), tId: tid, subjId: sid, className: cls, hours: h, maxPerDay: m }); });
+    renderAssignments(); document.querySelectorAll('input[name="c-check"]').forEach(c => c.checked = false); Swal.fire({title:'ជោគជ័យ!', icon:'success', toast:true, position:'top-end', showConfirmButton:false, timer:1000});
+}
+function removeAssignment(id) { state.assignments = state.assignments.filter(a => a.id !== id); for(let k in state.schedule) if(state.schedule[k] == id) delete state.schedule[k]; renderAssignments(); }
+
+function calculateTeacherLoad(t) {
+    const tAss = state.assignments.filter(a => a.tId === t.id); const assignedHours = tAss.reduce((s, a) => s + a.hours, 0); let reduction = 0;
+    if(t.isHomeroom) reduction += (parseInt(t.homeroomHours) || 0); if(t.isTechLead) reduction += 2; if(t.multiLevelBonus) reduction += (parseInt(t.multiLevelBonus) || 0);
+    let base = t.baseMode === 'custom' ? t.customBase : (t.baseMode === 'none' ? 999 : 14);
+    if(t.baseMode === 'auto') { const grades = [...new Set(tAss.map(a => getGrade(a.className)))]; base = grades.some(g => ['g10','g11','g12'].includes(g)) ? 16 : 18; }
+    return { assignedHours, reduction, overtime: base === 999 ? 0 : (assignedHours + reduction) - base, base };
+}
+
+function exportAssignmentsExcel() {
+    const data = state.assignments.length ? state.assignments.map(a => ({ 'ឈ្មោះគ្រូ (Teacher Name)': state.teachers.find(t=>t.id===a.tId)?.name || '', 'កូដមុខវិជ្ជា (Subject Code)': state.subjects.find(s=>s.id===a.subjId)?.code || '', 'ថ្នាក់រៀន (Classes)': a.className, 'ម៉ោងសរុប (Hours)': a.hours, 'Max/ថ្ងៃ': a.maxPerDay })) : [ { 'ឈ្មោះគ្រូ (Teacher Name)': 'ឧទាហរណ៍៖ សុខ សាន្ត', 'កូដមុខវិជ្ជា (Subject Code)': 'MATH', 'ថ្នាក់រៀន (Classes)': '12A, 12B', 'ម៉ោងសរុប (Hours)': 6, 'Max/ថ្ងៃ': 2 } ];
+    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 20}, {wch: 25}, {wch: 15}, {wch: 15}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Assignments"); XLSX.writeFile(wb, "Assignments_Template.xlsx");
+}
+
+function importAssignmentsExcel(e) {
+    const file = e.target.files[0]; if(!file) return; const r = new FileReader();
+    r.onload = function(evt) {
+        try {
+            const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0; let errCount = 0;
+            rows.forEach(r => {
+                const tName = r['ឈ្មោះគ្រូ (Teacher Name)']; const sCode = r['កូដមុខវិជ្ជា (Subject Code)']; const classesStr = r['ថ្នាក់រៀន (Classes)']; const hrs = parseInt(r['ម៉ោងសរុប (Hours)']); const maxD = parseInt(r['Max/ថ្ងៃ']) || 2;
+                if(tName && sCode && classesStr && !isNaN(hrs) && !tName.includes('ឧទាហរណ៍')) {
+                    const t = state.teachers.find(x => x.name.trim() === tName.trim()); const s = state.subjects.find(x => x.code.trim().toUpperCase() === sCode.trim().toUpperCase());
+                    if(t && s) {
+                        if(!t.subjectIds) t.subjectIds = []; if(!t.subjectIds.includes(s.id)) t.subjectIds.push(s.id);
+                        classesStr.toString().split(',').map(cl => cl.trim()).filter(Boolean).forEach(cls => {
+                            if(state.classes.includes(cls)) { state.assignments = state.assignments.filter(a => !(a.tId===t.id && a.subjId===s.id && a.className===cls)); state.assignments.push({ id: Date.now()+Math.random(), tId: t.id, subjId: s.id, className: cls, hours: hrs, maxPerDay: maxD }); c++; } else errCount++;
+                        });
+                    } else errCount++;
+                }
+            });
+            renderAssignments(); if(c>0) Swal.fire('ជោគជ័យ', `បញ្ចូលបាន ${c} ថ្នាក់។ (រកមិនឃើញ: ${errCount})`, 'success'); else Swal.fire('បរាជ័យ', 'មិនត្រឹមត្រូវ', 'error');
+        } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហាក្នុងការអាន File', 'error'); }
+    }; r.readAsBinaryString(file); e.target.value = '';
+}
+
+// --- Master Grid & AI ---
 function renderMasterGrid() {
     const head = document.getElementById('master-thead'); const body = document.getElementById('master-tbody');
     let tr1 = `<tr class="bg-slate-800 text-white font-moul text-[10px]"><th rowspan="2" class="p-3 border border-slate-700 sticky left-0 z-50 bg-slate-800">ថ្នាក់</th>`;
@@ -525,7 +616,7 @@ function renderMasterGrid() {
         let row = `<tr class="h-[60px] hover:bg-slate-50"><td class="sticky left-0 z-40 bg-white border border-slate-200 font-bold text-red-600 text-xs shadow-sm px-2">${cls}</td>`;
         DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => {
             const key = `${cls}_${d.id}_${i}`; const aid = state.schedule[key]; let content = '';
-            if(aid) { const a = state.assignments.find(x => x.id == aid); if(a) { const s = state.subjects.find(x => x.id === a.subjId); content = `<div draggable="true" ondragstart="handleDragStart(event,'${key}',${a.id})" class="w-full h-full flex flex-col justify-center items-center text-white p-1 rounded-sm cursor-grab shadow-inner" style="background:${s?.color}"><b class="text-[11px] drop-shadow-sm">${s?.code}</b><span class="text-[8px] mt-1 truncate w-full text-center">${state.teachers.find(x=>x.id===a.tId)?.name}</span></div>`; } }
+            if(aid) { const a = state.assignments.find(x => x.id == aid); if(a) { const s = state.subjects.find(x => x.id === a.subjId); content = `<div draggable="true" ondragstart="handleDragStart(event,'${key}',${a.id})" class="w-full h-full flex flex-col justify-center items-center text-white p-1 rounded-sm cursor-grab shadow-inner hover:opacity-90 transition-all" style="background:${s?.color}"><b class="text-[11px] drop-shadow-sm tracking-wide">${s?.code}</b><span class="text-[8px] mt-1 truncate w-full text-center">${state.teachers.find(x=>x.id===a.tId)?.name}</span></div>`; } }
             row += `<td class="border dropzone ${i===5?'border-l-4 border-l-slate-400':''}" ondragover="allowDrop(event)" ondrop="handleDrop(event,'${key}')" data-class="${cls}" data-day="${d.id}">${content}</td>`;
         });}); return row + `</tr>`;
     }).join(''); updateWaitBox();
@@ -540,13 +631,78 @@ function handleDragStart(e, skey, aid) { dragData = { skey, aid }; const a = sta
 function allowDrop(e) { e.preventDefault(); e.target.closest('.dropzone')?.classList.add('drag-over'); }
 function handleDrop(e, tkey) { e.preventDefault(); document.querySelectorAll('.valid-drop, .drag-over').forEach(el=>el.classList.remove('valid-drop','drag-over')); if(!dragData) return; const { skey, aid } = dragData; const newSch = {...state.schedule}; if(skey) delete newSch[skey]; newSch[tkey] = aid; state.schedule = newSch; renderMasterGrid(); dragData = null; }
 
-// Boilerplate Excel/Print functions (kept structural)
-function exportTeachersExcel() {} function importTeachersExcel() {}
-function exportAssignmentsExcel() {} function importAssignmentsExcel() {}
-function exportMasterExcel() {} function importMasterExcel() {}
-function renderAssignments() {} function renderSettings() {}
-function generateAutoSchedule() {}
+function generateAutoSchedule() {
+    Swal.fire({ title:'រៀបអូតូ', text:'លុបកាលវិភាគចាស់ចេញ រៀបថ្មីទាំងអស់?', icon:'warning', showCancelButton:true, confirmButtonColor:'#9333ea' }).then(res => {
+        if(res.isConfirmed) {
+            let ns = {}; [...state.assignments].sort((a,b) => b.hours - a.hours).forEach(ass => {
+                const t = state.teachers.find(x=>x.id===ass.tId); let pl = 0; let shuffledDays = [...t.availableDays].sort(()=>Math.random()-0.5);
+                for(let day of shuffledDays) {
+                    if(pl >= ass.hours) break; let tc = 0; for(let i=0; i<state.timeSlots.length; i++) if(ns[`${ass.className}_${day}_${i}`] === ass.id) tc++;
+                    if(tc >= ass.maxPerDay) continue;
+                    for(let i=0; i<state.timeSlots.length; i++) {
+                        const key = `${ass.className}_${day}_${i}`; if(ns[key]) continue;
+                        let conflict = false; for(let k in ns) if(k.includes(`_${day}_${i}`) && state.assignments.find(x=>x.id===ns[k])?.tId === t.id) conflict = true;
+                        if(!conflict) { ns[key] = ass.id; pl++; break; }
+                    }
+                }
+            }); state.schedule = ns; renderMasterGrid();
+        }
+    });
+}
 
+function exportMasterExcel() {
+    let aoa = [ ['ថ្នាក់'] ]; let row2 = [''];
+    DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { if(i===0) aoa[0].push(d.name); else aoa[0].push(''); row2.push(ts); }); }); aoa.push(row2);
+    state.classes.forEach(cls => {
+        let r = [cls];
+        DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { const aid = state.schedule[`${cls}_${d.id}_${i}`]; if(aid) { const ass = state.assignments.find(a=>a.id==aid); r.push(`${state.subjects.find(x=>x.id===ass.subjId)?.code} (${state.teachers.find(x=>x.id===ass.tId)?.name})`); } else r.push(''); }); });
+        aoa.push(r);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Master Schedule"); XLSX.writeFile(wb, "Master_Schedule.xlsx");
+}
+
+function importMasterExcel(e) {
+    const file = e.target.files[0]; if(!file) return; const r = new FileReader();
+    r.onload = function(evt) {
+        try {
+            const aoa = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]], {header: 1}); let newSch = {};
+            for(let rIdx=2; rIdx<aoa.length; rIdx++) {
+                const cls = aoa[rIdx][0]; if(!state.classes.includes(cls)) continue; let cIdx = 1;
+                DAYS.forEach(d => { state.timeSlots.forEach((ts, tIdx) => {
+                    const cell = aoa[rIdx][cIdx];
+                    if(cell && typeof cell === 'string') {
+                        const match = cell.match(/(.+?)\s*\((.+?)\)/);
+                        if(match) { const sCode = match[1].trim(); const tName = match[2].trim(); const ass = state.assignments.find(a => state.subjects.find(s=>s.id===a.subjId)?.code===sCode && state.teachers.find(t=>t.id===a.tId)?.name===tName && a.className===cls); if(ass) newSch[`${cls}_${d.id}_${tIdx}`] = ass.id; }
+                    } cIdx++;
+                });});
+            }
+            state.schedule = newSch; renderMasterGrid(); Swal.fire('ជោគជ័យ', 'ទាញចូលរួចរាល់', 'success');
+        } catch(err) { Swal.fire('បរាជ័យ', 'បញ្ហា File', 'error'); }
+    }; r.readAsBinaryString(file); e.target.value = '';
+}
+
+// --- Printing ---
+function renderIndividualDropdown() { const type = document.getElementById('print-type').value; document.getElementById('print-selector').innerHTML = (type==='class' ? state.classes.map(c => `<option value="${c}">ថ្នាក់ ${c}</option>`) : state.teachers.map(t => `<option value="${t.id}">${t.name}</option>`)).join(''); renderIndividualView(); }
+function renderIndividualView() { document.getElementById('print-canvas').innerHTML = `<div class="page-break">${generatePrintHtml(document.getElementById('print-type').value, document.getElementById('print-selector').value)}</div>`; }
+function printAll() { const type = document.getElementById('print-type').value; const list = type==='class' ? state.classes : state.teachers.map(t=>t.id); document.getElementById('print-canvas').innerHTML = list.map(v => `<div class="page-break">${generatePrintHtml(type, v)}</div>`).join(''); setTimeout(() => window.print(), 500); }
+function generatePrintHtml(type, val) {
+    const s = state.schoolInfo; let logoHtml = s.logo ? `<img src="${s.logo}" style="height:70px; display:block; margin: 0 auto 5px auto;">` : ''; let sigHtml = s.signature ? `<img src="${s.signature}" style="height:70px; display:block; margin: 15px auto;">` : '<br><br><br>';
+    let html = `<div class="print-header font-moul text-blue-900 text-[14px]"><div class="text-center w-64 leading-relaxed">${logoHtml}${s.department}<br>${s.schoolName}</div><div class="text-center text-[16px] leading-relaxed">ព្រះរាជាណាចក្រកម្ពុជា<br>ជាតិ សាសនា ព្រះមហាក្សត្រ<br><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Ornament_of_Cambodia.svg/512px-Ornament_of_Cambodia.svg.png" style="width:100px; margin: 5px auto;"></div><div class="w-64"></div></div><div class="print-title"><h2 class="font-moul text-[22px] mb-2">កាលវិភាគសិក្សាប្រចាំសប្ដាហ៍</h2><p class="font-bold font-moul text-[16px]">${type==='class' ? 'ថ្នាក់ទី៖ '+val : 'គ្រូបង្រៀន៖ '+state.teachers.find(t=>t.id===val)?.name}</p><p class="text-[14px] font-bold mt-1">ឆ្នាំសិក្សា ${s.academicYear}</p></div><table class="print-table"><thead><tr><th style="width: 12%;">ម៉ោង</th>${DAYS.map(d => `<th>${d.name}</th>`).join('')}</tr></thead><tbody>`;
+    state.timeSlots.forEach((time, ti) => {
+        if(ti === 5) html += `<tr style="border-top: 3px double #000;"><td colspan="7" class="font-moul bg-gray-50 text-[14px] py-2">ម៉ោងសម្រាកពេលរសៀល</td></tr>`;
+        html += `<tr><td class="font-moul text-[14px]">${time}</td>`;
+        DAYS.forEach(d => {
+            let cell = '';
+            if(type === 'class') { const aid = state.schedule[`${val}_${d.id}_${ti}`]; if(aid) { const ass = state.assignments.find(a=>a.id==aid); cell = `<div style="font-weight:bold; font-size:15px; margin-bottom:4px;">${state.subjects.find(x=>x.id===ass?.subjId)?.name}</div><div style="font-size:12px; color:#333; font-family:var(--battambang);">${state.teachers.find(x=>x.id===ass?.tId)?.name}</div>`; } } 
+            else { state.classes.forEach(cls => { const aid = state.schedule[`${cls}_${d.id}_${ti}`]; const ass = state.assignments.find(a=>a.id==aid); if(ass && ass.tId === val) cell = `<div style="font-size:12px; color:#333; margin-bottom:4px;">${state.subjects.find(x=>x.id===ass.subjId)?.name}</div><div style="font-weight:bold; font-size:16px;">ថ្នាក់ ${cls}</div>`; }); }
+            html += `<td>${cell}</td>`;
+        }); html += `</tr>`;
+    });
+    html += `</tbody></table><div class="print-footer"><div class="print-footer-box"><p class="font-moul text-[14px] mb-2">បានឃើញ និងឯកភាព</p><p class="font-moul text-[14px]">នាយកសាលា</p>${sigHtml}<p class="font-moul text-[16px]">${s.principalName}</p></div><div class="print-footer-box"><p class="text-[14px] italic mb-2">ធ្វើនៅ....................., ថ្ងៃទី....... ខែ....... ឆ្នាំ២០២...</p><p class="font-moul text-[14px] mb-16">អ្នករៀបចំកាលវិភាគ</p><p class="font-bold">.........................................</p></div></div>`;
+    return html;
+}
+
+// ដំណើរការកម្មវិធីនៅពេលបើក
 window.onload = () => { checkAuth(); };
 </script>
 </body>
