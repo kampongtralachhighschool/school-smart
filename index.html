@@ -1,3 +1,5 @@
+--- START OF FILE Paste April 17, 2026 - 8:21PM ---
+
 <!DOCTYPE html>
 <html lang="km">
 <head>
@@ -9,7 +11,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --moul: 'Moul', cursive; --battambang: 'Battambang', sans-serif; }
@@ -17,22 +18,44 @@
         .font-moul { font-family: var(--moul); }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .master-table th, .master-table td { border: 1px solid #cbd5e1; padding: 4px; text-align: center; }
-        .dropzone { min-width: 70px; height: 55px; transition: all 0.2s; }
+        
+        .master-table { border-collapse: collapse; background: white; }
+        .master-table th, .master-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 11px; }
+        .master-table th { background-color: #f8fafc; font-family: var(--battambang); font-weight: bold; }
+        .master-table .class-name { color: red; font-weight: bold; font-family: 'Arial', sans-serif; }
+        
+        .dropzone { min-width: 70px; height: 55px; transition: all 0.2s; position: relative; }
         .drag-over { background-color: #dbeafe !important; border: 2px dashed #3b82f6 !important; }
         .valid-drop { background-color: #dcfce7 !important; border: 2px solid #22c55e !important; }
+        .invalid-drop { background-color: #fee2e2 !important; border: 2px dashed #ef4444 !important; opacity: 0.5; cursor: not-allowed; }
+        
+        .dimmed { opacity: 0.15; filter: grayscale(100%); transition: opacity 0.3s; }
+        .blocked-slot { background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 5px, #e2e8f0 5px, #e2e8f0 10px); opacity: 0.5; }
+        .highlighted { transform: scale(1.05); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); z-index: 10; border: 2px solid #2563eb !important; transition: transform 0.2s; }
+
+        /* Smart Tooltip */
+        .tooltip-wrapper { position: relative; display: inline-flex; }
+        .tooltip-wrapper .tooltip-text {
+            visibility: hidden; width: max-content; max-width: 250px; background-color: #1e293b; color: #fff; text-align: left;
+            border-radius: 6px; padding: 8px 12px; position: absolute; z-index: 1000; bottom: 125%; left: 50%; transform: translateX(-50%);
+            opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.5; font-family: var(--battambang); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); pointer-events: none;
+        }
+        .tooltip-wrapper .tooltip-text::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #1e293b transparent transparent transparent; }
+        .tooltip-wrapper:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+        /* Print Standard A4 Landscape */
         @media print {
-            @page { size: A4 landscape; margin: 10mm 15mm; }
-            body { background: white; -webkit-print-color-adjust: exact; margin: 0; padding: 0; }
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background: white !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .print-hidden { display: none !important; }
             .page-break { page-break-after: always; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 20px; }
             .page-break:last-child { page-break-after: auto; }
             .print-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-            .print-title { text-align: center; margin-bottom: 20px; }
-            .print-table { width: 100%; border-collapse: collapse; border: 2px solid #000; flex-grow: 1; margin-bottom: 20px; }
-            .print-table th, .print-table td { border: 1px solid #000 !important; padding: 8px; text-align: center; color: #000 !important; font-size: 14px; }
-            .print-table th { background-color: #f3f4f6 !important; font-family: var(--moul); font-size: 15px; padding: 12px 8px; }
-            .print-table td { height: 60px; }
+            .print-title { text-align: left; margin-bottom: 10px; }
+            .print-table { width: 100%; border-collapse: collapse !important; border: 2px solid #000 !important; flex-grow: 1; margin-bottom: 20px; background: transparent; }
+            .print-table th, .print-table td { border: 1px solid #000 !important; padding: 6px !important; text-align: center !important; color: #000 !important; font-size: 12px !important; }
+            .print-table th { background-color: #f8fafc !important; font-family: var(--moul) !important; font-size: 14px !important; padding: 10px 6px !important; }
+            .print-table td { height: 50px !important; vertical-align: middle !important; }
             .print-footer { display: flex; justify-content: space-between; padding: 0 40px; margin-top: auto; }
             .print-footer-box { text-align: center; width: 250px; }
         }
@@ -40,669 +63,762 @@
 </head>
 <body class="h-screen overflow-hidden flex flex-col relative">
 
-    <!-- LOGIN / SIGNUP SCREEN -->
+    <!-- AUTHENTICATION SCREEN -->
     <div id="auth-screen" class="absolute inset-0 bg-slate-900 z-[100] flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md space-y-6">
-            <div class="text-center">
-                <div class="bg-blue-600 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-white mb-4 shadow-lg"><i data-lucide="shield-check" class="w-8 h-8"></i></div>
-                <h2 class="font-moul text-2xl text-blue-900">School Smart</h2>
-                <p class="text-slate-500 text-sm mt-2">ប្រព័ន្ធគ្រប់គ្រង Enterprise Edition</p>
-            </div>
-            
-            <div id="login-form" class="space-y-4">
-                <div><label class="text-xs font-bold text-slate-500 uppercase">អ៊ីមែល</label><input type="email" id="auth-email" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
-                <div><label class="text-xs font-bold text-slate-500 uppercase">លេខសម្ងាត់</label><input type="password" id="auth-pass" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
-                <button onclick="handleAuth('login')" id="btn-login" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">ចូលប្រព័ន្ធ (Login)</button>
-                <div class="text-center border-t pt-4 mt-2">
-                    <p class="text-xs text-slate-500 mb-2">មិនទាន់មានគណនីមែនទេ?</p>
-                    <button onclick="handleAuth('signup')" class="w-full bg-white border-2 border-blue-600 text-blue-600 p-3 rounded-xl font-bold hover:bg-blue-50 transition-all">ចុះឈ្មោះថ្មី (Sign Up)</button>
-                </div>
-            </div>
+        <!-- Auth Content (Same as before) -->
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md space-y-6 relative overflow-hidden">
+            <div class="text-center"><div class="bg-blue-600 w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-white mb-4"><i data-lucide="shield-check" class="w-8 h-8"></i></div><h2 class="font-moul text-2xl text-blue-900">School Smart</h2><p class="text-slate-500 text-sm mt-2" id="auth-title">ចូលប្រើប្រាស់ប្រព័ន្ធ</p></div>
+            <div id="login-form" class="space-y-4"><input type="email" id="login-email" placeholder="អ៊ីមែល" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none"><input type="password" id="login-pass" placeholder="លេខសម្ងាត់" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none"><div class="text-right"><button onclick="switchAuth('reset')" class="text-xs text-blue-600 font-bold hover:underline">ភ្លេចលេខសម្ងាត់?</button></div><button onclick="handleLogin()" id="btn-login" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700">ចូលប្រព័ន្ធ (Login)</button><div class="text-center border-t pt-4 mt-2"><button onclick="switchAuth('signup')" class="text-sm font-bold text-slate-500 hover:text-blue-600">ស្នើសុំចុះឈ្មោះទីនេះ</button></div></div>
+            <div id="signup-form" class="space-y-4 hidden"><input type="email" id="signup-email" placeholder="អ៊ីមែលថ្មី" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none"><input type="password" id="signup-pass" placeholder="លេខសម្ងាត់ថ្មី (យ៉ាងហោច ៦ខ្ទង់)" class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none"><div class="relative"><input type="text" id="signup-code" placeholder="លេខកូដ (Invite Code)" class="w-full p-3 border-2 border-orange-300 rounded-xl font-bold bg-orange-50 outline-none text-orange-700"><a href="https://t.me/mrhonmom" target="_blank" class="absolute right-3 top-3 text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 hover:bg-blue-200"><i data-lucide="send" class="w-3 h-3"></i> សុំកូដ</a></div><button onclick="handleSignup()" id="btn-signup" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-orange-600">ចុះឈ្មោះគណនីថ្មី</button><div class="text-center border-t pt-4 mt-2"><button onclick="switchAuth('login')" class="text-sm font-bold text-slate-500 hover:text-blue-600">ត្រឡប់ទៅ Login</button></div></div>
+            <div id="reset-form" class="space-y-4 hidden"><p class="text-xs text-slate-500 text-center">សូមបញ្ចូលអ៊ីមែល។</p><input type="email" id="reset-email" placeholder="បញ្ចូលអ៊ីមែល..." class="w-full p-3 border rounded-xl font-bold bg-slate-50 outline-none"><button onclick="handleResetPassword()" id="btn-reset" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-slate-700">ផ្ញើការស្នើសុំ</button><div class="text-center border-t pt-4 mt-2"><button onclick="switchAuth('login')" class="text-sm font-bold text-slate-500 hover:text-blue-600">ត្រឡប់ទៅ Login</button></div></div>
         </div>
     </div>
 
     <!-- MAIN APP WRAPPER -->
     <div id="app-wrapper" class="hidden flex flex-col h-full w-full">
-        <!-- TOP NAV -->
         <nav class="bg-white border-b p-3 flex justify-between items-center shrink-0 print-hidden shadow-sm z-50">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg"><i data-lucide="shield-check"></i></div>
-                <div>
-                    <span class="font-bold text-lg">School Smart <span id="nav-school" class="text-blue-600 font-moul ml-2"></span></span>
-                    <div class="text-[10px] font-bold text-slate-400" id="user-info">កំពុងផ្ទុក...</div>
-                </div>
-            </div>
-            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto" id="nav-tabs-container"></div>
+            <div class="flex items-center gap-3"><div class="bg-blue-600 p-2 rounded-xl text-white"><i data-lucide="cloud-check"></i></div><div><span class="font-bold text-lg">School Smart <span id="nav-school" class="text-blue-600 font-moul ml-2"></span></span><div class="text-[10px] font-bold text-slate-400" id="sync-status">🟢 Auto-Saved (Cloud)</div></div></div>
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto custom-scrollbar" id="nav-tabs-container"></div>
             <button onclick="handleLogout()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> ចេញ</button>
         </nav>
 
         <main class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50 relative">
             
-            <!-- MASTER GRID TAB -->
+            <!-- MASTER GRID TAB (4) -->
             <div id="master" class="tab-content hidden h-full flex-col gap-4">
                 <div class="bg-white p-4 rounded-2xl border shadow-sm flex flex-wrap justify-between items-center print-hidden gap-4">
-                    <div class="flex items-center gap-4 flex-1">
-                        <span class="font-bold text-slate-700 flex items-center gap-2"><i data-lucide="inbox" class="text-orange-500"></i> រង់ចាំ (<span id="wait-count">0</span>)</span>
-                        <div id="waiting-content" class="flex gap-2 overflow-x-auto max-w-xl p-1 custom-scrollbar"></div>
+                    <div class="flex gap-4 items-center flex-wrap flex-1">
+                        <div class="relative"><i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i><input type="text" id="search-master" oninput="debouncedApplyMasterFilters()" placeholder="ស្វែងរកកូដ/ឈ្មោះគ្រូ..." class="pl-9 pr-3 py-2 border-2 border-blue-200 rounded-xl text-sm font-bold bg-blue-50 text-blue-800 outline-none w-56 focus:ring-2 focus:ring-blue-400 transition-all"></div>
+                        <div class="relative"><i data-lucide="filter" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i><input type="text" id="filter-class" oninput="debouncedApplyMasterFilters()" placeholder="ត្រងមើលតែថ្នាក់ (ឧ. 12A)..." class="pl-9 pr-3 py-2 border rounded-xl text-sm font-bold bg-slate-50 outline-none w-56"></div>
                     </div>
                     <div class="flex gap-2 items-center">
-                        <div class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 mr-2 flex items-center gap-1">
-                            <i data-lucide="info" class="w-4 h-4"></i> កំពុងបើក Version: <span id="current-version-display" class="text-red-500">មិនទាន់រក្សាទុក</span>
-                        </div>
-                        <button onclick="exportMasterExcel()" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2 text-sm"><i data-lucide="file-down" class="w-4 h-4"></i> Export</button>
-                        <button onclick="generateAutoSchedule()" class="bg-purple-600 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg ml-2"><i data-lucide="wand-2"></i> រៀបអូតូ (AI)</button>
+                        <button onclick="clearSchedule()" class="bg-red-100 text-red-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2 text-sm hover:bg-red-200 transition-all"><i data-lucide="trash" class="w-4 h-4"></i> ជម្រះទាំងអស់</button>
+                        <button onclick="exportMasterExcel()" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-xl font-bold flex items-center gap-2 text-sm hover:bg-emerald-200"><i data-lucide="file-down" class="w-4 h-4"></i> Export</button>
+                        <button onclick="generateAutoSchedule()" class="bg-purple-600 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg ml-2 hover:bg-purple-700 active:scale-95 transition-all"><i data-lucide="wand-2"></i> រៀបអូតូ (AI Smart)</button>
                     </div>
                 </div>
-                <div class="bg-white rounded-2xl shadow-sm border overflow-auto flex-1 custom-scrollbar relative">
-                    <table class="master-table w-max border-collapse select-none" id="master-table">
-                        <thead id="master-thead" class="sticky top-0 z-50"></thead>
+
+                <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-2xl flex gap-4 items-center print-hidden min-h-[70px]">
+                    <span class="font-bold text-indigo-900 flex items-center gap-2 flex-shrink-0"><i data-lucide="inbox" class="text-orange-500"></i> រង់ចាំ (<span id="wait-count" class="text-red-500 text-lg">0</span>)</span>
+                    <div id="waiting-content" class="flex gap-2 overflow-x-auto w-full p-1 custom-scrollbar"></div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border overflow-auto flex-1 custom-scrollbar relative p-2">
+                    <table class="master-table w-max select-none mx-auto" id="master-table">
+                        <thead id="master-thead" class="sticky top-0 z-50 shadow-sm"></thead>
                         <tbody id="master-tbody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- OWNER PANEL (ONLY FOR OWNER) -->
-            <div id="owner-panel" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
-                <div class="bg-slate-900 p-8 rounded-3xl text-white shadow-xl flex justify-between items-center">
-                    <div>
-                        <h2 class="text-2xl font-moul text-blue-400 mb-2">ផ្ទាំងគ្រប់គ្រងប្រព័ន្ធ (Super Owner)</h2>
-                        <p class="text-slate-400 text-sm">បង្កើតសាលារៀន និងផ្ដល់សិទ្ធិឲ្យ Admin គ្រប់គ្រងតាមសាលានីមួយៗ</p>
-                    </div>
-                    <i data-lucide="crown" class="w-16 h-16 text-yellow-500"></i>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- School Management -->
-                    <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-                        <h3 class="font-bold text-lg text-slate-800 border-b pb-2 flex justify-between items-center">១. បង្កើតសាលារៀន 
-                            <button onclick="createSchool()" class="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg">+ សាលាថ្មី</button>
-                        </h3>
-                        <div id="owner-school-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar"></div>
-                    </div>
-
-                    <!-- User Management -->
-                    <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-                        <h3 class="font-bold text-lg text-slate-800 border-b pb-2">២. ផ្ដល់សិទ្ធិឲ្យគណនី (Assign Role)</h3>
-                        <p class="text-xs text-slate-500 mb-2">អ្នកប្រើប្រាស់ត្រូវ Sign Up គណនីមុនសិន ទើប Owner អាចរើសឈ្មោះផ្ដល់សិទ្ធិនៅទីនេះបាន។</p>
-                        <div id="owner-user-list" class="space-y-3 max-h-60 overflow-y-auto custom-scrollbar p-2"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VERSIONS & DATA TAB -->
-            <div id="data" class="tab-content hidden space-y-6 max-w-5xl mx-auto">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Save New Version -->
-                    <div class="md:col-span-1 bg-white p-6 rounded-3xl border shadow-sm text-center flex flex-col items-center justify-center space-y-4">
-                        <div class="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center text-blue-600"><i data-lucide="save" class="w-8 h-8"></i></div>
-                        <h3 class="font-moul text-lg text-blue-900">រក្សាទុកកាលវិភាគថ្មី</h3>
-                        <p class="text-xs text-slate-500">រក្សាទុកការរៀបចំបច្ចុប្បន្នជា Version ថ្មី ដើម្បីទាញយកមកប្រើប្រាស់នៅពេលក្រោយ។</p>
-                        <input type="text" id="v-name" placeholder="ឈ្មោះ: ឆមាសទី១ លើកទី១..." class="w-full p-3 border rounded-xl font-bold bg-slate-50 text-sm">
-                        <input type="date" id="v-date" class="w-full p-3 border rounded-xl font-bold bg-slate-50 text-sm text-slate-600">
-                        <button onclick="saveVersionToCloud()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all">Save Version ទៅ Cloud</button>
-                    </div>
-
-                    <!-- Versions History -->
-                    <div class="md:col-span-2 bg-white p-6 rounded-3xl border shadow-sm flex flex-col">
-                        <h3 class="font-moul text-lg text-blue-900 border-b pb-3 mb-4 flex items-center gap-2"><i data-lucide="history"></i> ប្រវត្តិកាលវិភាគ (Versions History)</h3>
-                        <div id="versions-list" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
-                            <p class="text-slate-400 text-sm italic text-center mt-10">កំពុងទាញទិន្នន័យពី Cloud...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- OTHER TABS (Same as previous, just structural containers) -->
+            <!-- TEACHERS INFO TAB (2) -->
             <div id="teachers-tab" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
-                <div class="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div><h3 class="font-moul text-blue-800 text-lg mb-2">បញ្ជីឈ្មោះគ្រូបង្រៀន</h3><p class="text-sm text-blue-600 font-bold">បញ្ចូលតាម Excel ដើម្បីចំណេញពេល។</p></div>
-                    <div class="flex gap-3">
-                        <button onclick="exportTeachersExcel()" class="bg-white text-blue-700 border-2 border-blue-200 px-6 py-3 rounded-2xl font-bold shadow-sm"><i data-lucide="download" class="inline w-4 h-4 mr-1"></i> គំរូ Excel</button>
-                        <label class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer hover:bg-blue-700 shadow-lg"><i data-lucide="upload" class="inline w-4 h-4 mr-1"></i> Import ទិន្នន័យ<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importTeachersExcel(event)"></label>
-                    </div>
-                </div>
-                <div class="bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex justify-between items-center mb-6 border-b pb-4"><h3 class="font-bold text-slate-800 text-lg">គ្រប់គ្រងគ្រូដោយដៃ</h3><button onclick="addTeacherBlank()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">+ បន្ថែមគ្រូ១នាក់</button></div>
-                    <div id="teacher-manage-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-                </div>
+                <div class="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-6"><div><h3 class="font-moul text-blue-800 text-lg mb-2">បញ្ជីឈ្មោះគ្រូបង្រៀន</h3><p class="text-sm text-blue-600 font-bold">ទាញចេញជាគំរូ បំពេញ រួច Import ចូលលឿនបំផុត។</p></div><div class="flex gap-3"><button onclick="exportTeachersExcel()" class="bg-white text-blue-700 border-2 border-blue-200 px-6 py-3 rounded-2xl font-bold shadow-sm flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> គំរូ Excel</button><label class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer hover:bg-blue-700 shadow-lg flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> Import ទិន្នន័យ<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importTeachersExcel(event)"></label></div></div>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm"><div class="flex justify-between items-center mb-6 border-b pb-4"><h3 class="font-bold text-slate-800 text-lg">គ្រប់គ្រងគ្រូ</h3><div class="flex gap-2 items-center"><div class="relative"><i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i><input type="text" id="search-teacher" oninput="debouncedRenderTeachersTab()" placeholder="ស្វែងរកឈ្មោះគ្រូ..." class="pl-9 pr-3 py-2 border rounded-xl text-sm font-bold bg-slate-50 outline-none w-64"></div><button onclick="addTeacherBlank()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold">+ បន្ថែម</button></div></div><div id="teacher-manage-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div></div>
             </div>
 
+            <!-- STANDARD HOURS TAB (1) -->
+            <div id="standard-hours" class="tab-content hidden space-y-6 max-w-5xl mx-auto">
+                <div class="bg-indigo-50 border-2 border-indigo-200 p-6 rounded-3xl flex justify-between items-center"><div><h3 class="font-moul text-indigo-800 text-lg mb-2">កំណត់ម៉ោងស្តង់ដារក្រសួង</h3><p class="text-sm text-indigo-600 font-bold">បែងចែកម៉ោងថ្នាក់វិទ្យាសាស្ត្រពិត (SC) និងសង្គម (SS)។ ម៉ោងទាំងនេះនឹងត្រូវយកទៅប្រើអូតូពេលចាត់តាំងមុខវិជ្ជា។</p></div><div class="flex gap-3"><button onclick="exportRulesExcel()" class="bg-white text-indigo-700 border-2 border-indigo-200 px-6 py-3 rounded-2xl font-bold shadow-sm flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> គំរូ Excel</button><label class="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer hover:bg-indigo-700 flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> Import ទិន្នន័យ<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importRulesExcel(event)"></label></div></div>
+                <div class="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto"><table class="w-full text-[12px] border-collapse" id="rules-table"></table></div>
+            </div>
+
+            <!-- ASSIGNMENTS TAB (3) -->
             <div id="assignments" class="tab-content hidden space-y-6">
-                <div class="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex justify-between items-center">
-                    <div><h3 class="font-moul text-blue-800 text-lg mb-2">ចាត់តាំងមុខវិជ្ជា តាម Excel</h3></div>
-                    <div class="flex gap-3">
-                        <button onclick="exportAssignmentsExcel()" class="bg-white text-blue-700 border-2 border-blue-200 px-6 py-3 rounded-2xl font-bold shadow-sm"><i data-lucide="download" class="inline w-4 h-4"></i> គំរូ Excel</button>
-                        <label class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer"><i data-lucide="upload" class="inline w-4 h-4"></i> Import ទិន្នន័យ<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importAssignmentsExcel(event)"></label>
-                    </div>
-                </div>
+                <div class="bg-blue-50 border-2 border-blue-200 p-6 rounded-3xl flex justify-between items-center"><div><h3 class="font-moul text-blue-800 text-lg mb-2">ចាត់តាំងមុខវិជ្ជា & ថ្នាក់បង្រៀន</h3></div><div class="flex gap-3"><button onclick="exportAssignmentsExcel()" class="bg-white text-blue-700 border-2 border-blue-200 px-6 py-3 rounded-2xl font-bold shadow-sm flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> គំរូ Excel</button><label class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold cursor-pointer flex items-center gap-2"><i data-lucide="upload" class="w-4 h-4"></i> Import ទិន្នន័យ<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importAssignmentsExcel(event)"></label></div></div>
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <div class="lg:col-span-1 bg-white p-6 rounded-2xl border shadow-sm space-y-4 sticky top-0 h-max">
-                        <h3 class="font-bold text-slate-800 border-b pb-3">ចាត់តាំងដោយដៃ</h3>
-                        <div><label class="text-[10px] font-bold text-slate-400 uppercase">១. រើសគ្រូ</label><div id="teacher-quick-list" class="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto p-2 border rounded-xl bg-slate-50"></div></div>
-                        <div><label class="text-[10px] font-bold text-slate-400 uppercase">២. រើសមុខវិជ្ជា</label><select id="selSubject" onchange="autoFillHours()" class="w-full p-2.5 rounded-xl bg-slate-50 border-0 font-bold outline-none ring-1 ring-slate-200"></select></div>
-                        <div><label class="text-[10px] font-bold text-slate-400 uppercase">៣. រើសថ្នាក់</label><div id="class-checks" class="grid grid-cols-3 gap-1.5 max-h-32 overflow-y-auto p-2 border rounded-xl bg-slate-50"></div></div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div><label class="text-[10px] font-bold text-slate-400 uppercase">ម៉ោង</label><input type="number" id="inpHours" class="w-full p-2.5 rounded-xl bg-white border font-bold text-center"></div>
-                            <div><label class="text-[10px] font-bold text-slate-400 uppercase">Max/ថ្ងៃ</label><input type="number" id="inpMax" class="w-full p-2.5 rounded-xl bg-white border font-bold text-center text-red-500"></div>
-                        </div>
-                        <button onclick="bulkAdd()" class="w-full bg-slate-800 text-white py-3 rounded-2xl font-bold">បញ្ជាក់ការចាត់តាំង</button>
-                    </div>
+                    <div class="lg:col-span-1 bg-white p-6 rounded-2xl border shadow-sm space-y-4 sticky top-0 h-max"><h3 class="font-bold text-slate-800 border-b pb-3">ចាត់តាំងដោយដៃ</h3><div><label class="text-[10px] font-bold text-slate-400 uppercase">១. ស្វែងរក និងរើសគ្រូ</label><input type="text" id="search-assign-teacher" oninput="debouncedRenderAssignments()" placeholder="វាយឈ្មោះគ្រូទីនេះ..." class="w-full mb-2 p-2 border rounded-lg text-xs font-bold bg-slate-50 outline-none"><div id="teacher-quick-list" class="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto p-2 border rounded-xl bg-slate-50"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">២. រើសមុខវិជ្ជា (ម៉ោងនឹងទាញអូតូ)</label><select id="selSubject" class="w-full p-2.5 rounded-xl bg-slate-50 border-0 font-bold outline-none ring-1 ring-slate-200"></select></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">៣. រើសថ្នាក់ (ជ្រើសរើសបានច្រើន)</label><div id="class-checks" class="grid grid-cols-3 gap-1.5 max-h-32 overflow-y-auto p-2 border rounded-xl bg-slate-50"></div></div><div><label class="text-[10px] font-bold text-slate-400 uppercase">៤. Max ម៉ោងជាប់គ្នា/ថ្ងៃ</label><input type="number" id="inpMax" value="2" class="w-full p-2.5 rounded-xl bg-white border font-bold text-center text-red-500 outline-none"></div><button onclick="bulkAdd()" class="w-full bg-slate-800 text-white py-3 rounded-2xl font-bold">បញ្ចូលការចាត់តាំង</button></div>
                     <div class="lg:col-span-3 space-y-4"><div id="teacher-load-list" class="space-y-4"></div></div>
                 </div>
             </div>
 
+            <!-- SETTINGS TAB (0) -->
             <div id="settings" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-                            <h3 class="font-bold text-blue-900 border-b pb-2">ព័ត៌មានទូទៅសាលា</h3>
-                            <input id="info-dept" onchange="updateInfo('department', this.value)" placeholder="មន្ទីរអប់រំ" class="w-full p-3 border rounded-xl font-bold bg-slate-50">
-                            <input id="info-school" onchange="updateInfo('schoolName', this.value)" placeholder="ឈ្មោះសាលា" class="w-full p-3 border rounded-xl font-bold bg-slate-50">
-                            <div class="grid grid-cols-2 gap-4">
-                                <input id="info-year" onchange="updateInfo('academicYear', this.value)" placeholder="ឆ្នាំសិក្សា" class="p-3 border rounded-xl font-bold bg-slate-50">
-                                <input id="info-principal" onchange="updateInfo('principalName', this.value)" placeholder="ឈ្មោះនាយក" class="p-3 border rounded-xl font-bold bg-slate-50">
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
-                            <h3 class="font-bold text-blue-900 border-b pb-2">រូបភាព (សម្រាប់ព្រីន)</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="border rounded-xl p-3 flex flex-col items-center gap-2"><span class="text-xs font-bold text-slate-500">Logo</span><img id="preview-logo" src="" class="w-16 h-16 object-contain hidden border bg-slate-50 rounded"><input type="file" accept="image/*" onchange="uploadImage(event, 'logo')" class="text-[10px] w-full"></div>
-                                <div class="border rounded-xl p-3 flex flex-col items-center gap-2"><span class="text-xs font-bold text-slate-500">ហត្ថលេខា</span><img id="preview-signature" src="" class="h-16 object-contain hidden border bg-slate-50 rounded"><input type="file" accept="image/*" onchange="uploadImage(event, 'signature')" class="text-[10px] w-full"></div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl border shadow-sm"><h3 class="font-bold mb-4 text-blue-900 border-b pb-2">បញ្ជីថ្នាក់ (ក្បៀស)</h3><textarea id="classes-input" onchange="updateClasses(this.value)" class="w-full p-4 rounded-xl border bg-slate-50 min-h-[80px] font-bold outline-none"></textarea></div>
-                        <div class="bg-white p-6 rounded-2xl border shadow-sm"><h3 class="font-bold mb-4 text-blue-900 border-b pb-2">ម៉ោងសិក្សា</h3><div id="time-slots-container" class="grid grid-cols-2 gap-3"></div></div>
-                    </div>
-                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4"><h3 class="font-bold text-blue-900 border-b pb-2">ព័ត៌មានសាលា</h3><input id="info-dept" oninput="updateInfo('department', this.value)" placeholder="មន្ទីរអប់រំ" class="w-full p-3 border rounded-xl font-bold bg-slate-50"><input id="info-school" oninput="updateInfo('schoolName', this.value)" placeholder="ឈ្មោះសាលា" class="w-full p-3 border rounded-xl font-bold bg-slate-50"><div class="grid grid-cols-2 gap-4"><input id="info-year" oninput="updateInfo('academicYear', this.value)" placeholder="ឆ្នាំសិក្សា" class="p-3 border rounded-xl font-bold bg-slate-50"><input id="info-principal" oninput="updateInfo('principalName', this.value)" placeholder="ឈ្មោះនាយក" class="p-3 border rounded-xl font-bold bg-slate-50"></div></div>
+                        
                         <div class="bg-white p-6 rounded-2xl border shadow-sm">
-                            <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="font-bold text-blue-900">មុខវិជ្ជា & កូដ</h3><button onclick="addSubjectBlank()" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold">+ បន្ថែមមុខវិជ្ជា</button></div>
-                            <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase mb-2 px-2"><div class="col-span-6">ឈ្មោះមុខវិជ្ជា</div><div class="col-span-4">កូដ</div><div class="col-span-2 text-center">លុប</div></div>
-                            <div id="subject-manage-list" class="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-2 mb-6"></div>
-                            <div class="flex justify-between items-center border-t pt-4 mb-4">
-                                <h3 class="font-bold text-sm text-slate-800">ម៉ោងស្តង់ដារតាមកម្រិត</h3>
-                                <div class="flex gap-2">
-                                    <button onclick="exportRulesExcel()" class="text-green-600 bg-green-50 px-2 py-1 rounded border text-xs font-bold"><i data-lucide="download" class="w-3 h-3 inline"></i> គំរូ</button>
-                                    <label class="text-blue-600 bg-blue-50 px-2 py-1 rounded border text-xs font-bold cursor-pointer"><i data-lucide="upload" class="w-3 h-3 inline"></i> Import<input type="file" class="hidden" accept=".xlsx, .xls" onchange="importRulesExcel(event)"></label>
-                                </div>
-                            </div>
-                            <div class="overflow-x-auto"><table class="w-full text-[11px] border-collapse" id="rules-table"></table></div>
+                            <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="font-bold text-blue-900">ការកំណត់ម៉ោងសិក្សា</h3></div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase mb-2 block">កំណត់ចំនួន និងពេលវេលា៖</label>
+                            <div id="time-slots-container" class="grid grid-cols-2 gap-3 mb-6"></div>
+                            
+                            <label class="text-[10px] font-bold text-slate-500 uppercase mb-2 block border-t pt-4">បិទវេនមិនរៀនទូទាំងសាលា (Locked Shifts)៖</label>
+                            <div id="blocked-shifts-container" class="grid grid-cols-6 gap-2"></div>
                         </div>
+
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm">
+                            <div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="font-bold text-blue-900">គ្រប់គ្រងថ្នាក់រៀន</h3><div class="flex gap-2"><button onclick="addClassBlank()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">+ ថ្នាក់ថ្មី</button></div></div>
+                            <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase mb-2 px-2"><div class="col-span-3">ឈ្មោះ</div><div class="col-span-3">ប្រភេទ</div><div class="col-span-3">វេនរៀន</div><div class="col-span-2 text-center" title="គូសធីកបើថ្នាក់នេះអនុញ្ញាតរៀនម៉ោងពិសេស">ម៉ោង<br>ពិសេស</div><div class="col-span-1 text-center">លុប</div></div>
+                            <div id="class-manage-list" class="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm space-y-4"><h3 class="font-bold text-blue-900 border-b pb-2">រូបភាព (សម្រាប់ព្រីន)</h3><div class="grid grid-cols-2 gap-4"><div class="border rounded-xl p-3 flex flex-col items-center gap-2"><span class="text-xs font-bold text-slate-500">Logo</span><img id="preview-logo" src="" class="w-16 h-16 object-contain hidden border bg-slate-50 rounded"><input type="file" accept="image/*" onchange="uploadImage(event, 'logo')" class="text-[10px] w-full"></div><div class="border rounded-xl p-3 flex flex-col items-center gap-2"><span class="text-xs font-bold text-slate-500">ហត្ថលេខា</span><img id="preview-signature" src="" class="h-16 object-contain hidden border bg-slate-50 rounded"><input type="file" accept="image/*" onchange="uploadImage(event, 'signature')" class="text-[10px] w-full"></div></div></div>
+                        <div class="bg-white p-6 rounded-2xl border shadow-sm"><div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="font-bold text-blue-900">បញ្ជីមុខវិជ្ជា & កូដគោល</h3><button onclick="addSubjectBlank()" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold">+ មុខវិជ្ជាថ្មី</button></div><div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase mb-2 px-2"><div class="col-span-6">ឈ្មោះមុខវិជ្ជា</div><div class="col-span-4">អក្សរកាត់</div><div class="col-span-2 text-center">លុប</div></div><div id="subject-manage-list" class="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2"></div></div>
                     </div>
                 </div>
             </div>
 
+            <!-- PRINT TAB (5) -->
             <div id="individual" class="tab-content hidden max-w-5xl mx-auto space-y-6">
                 <div class="bg-white p-4 rounded-2xl border shadow-sm flex flex-wrap gap-4 items-center justify-between print-hidden">
                     <div class="flex gap-4 items-center flex-1">
                         <select id="print-type" onchange="renderIndividualDropdown()" class="p-3 rounded-xl border bg-slate-50 font-bold outline-none"><option value="class">ថ្នាក់រៀន</option><option value="teacher">គ្រូបង្រៀន</option></select>
                         <select id="print-selector" onchange="renderIndividualView()" class="flex-1 p-3 rounded-xl border bg-slate-50 font-bold text-blue-600 outline-none"></select>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.print()" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2"><i data-lucide="printer"></i> ព្រីន១នេះ</button>
-                        <button onclick="printAll()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg"><i data-lucide="layers"></i> ព្រីនទាំងអស់ (A4)</button>
-                    </div>
+                    <div class="flex gap-2"><button onclick="window.print()" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2"><i data-lucide="printer"></i> ព្រីន១នេះ</button><button onclick="printAll()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg"><i data-lucide="layers"></i> ព្រីនទាំងអស់ (A4)</button></div>
                 </div>
                 <div id="print-canvas" class="print-container bg-white p-10 rounded-2xl shadow-sm border print:p-0 print:shadow-none print:border-none print:bg-transparent"></div>
             </div>
+
+            <!-- OWNER PANEL -->
+            <div id="owner-panel" class="tab-content hidden space-y-6 max-w-5xl mx-auto">
+                <div class="bg-slate-900 p-8 rounded-3xl text-white flex justify-between items-center"><div><h2 class="text-2xl font-moul text-blue-400">Super Owner</h2><p class="text-slate-400 text-sm">គ្រប់គ្រងសាលា Admin និង Invite Codes</p></div><i data-lucide="crown" class="w-12 h-12 text-yellow-500"></i></div>
+                <div class="bg-white p-6 rounded-2xl border"><h3 class="font-bold border-b pb-2 text-slate-800 flex justify-between">លេខកូដចុះឈ្មោះ (Invite Codes) <button onclick="generateInviteCode()" class="bg-orange-500 text-white px-3 py-1 text-xs rounded font-bold">+ បង្កើតកូដថ្មី</button></h3><div id="invite-codes-list" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 max-h-40 overflow-y-auto"></div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl border"><h3 class="font-bold border-b pb-2 text-slate-800 flex justify-between">សាលារៀន <button onclick="createSchool()" class="bg-blue-600 text-white px-3 py-1 text-xs rounded">+ ថ្មី</button></h3><div id="owner-school-list" class="mt-4 space-y-2"></div></div><div class="bg-white p-6 rounded-2xl border"><h3 class="font-bold border-b pb-2 text-slate-800">គណនី Admin/User</h3><div id="owner-user-list" class="mt-4 space-y-2"></div></div></div>
+            </div>
+            
         </main>
     </div>
 
 <script>
 // ==========================================
-// 1. SUPABASE CONFIGURATION (FIXED VARIABLE NAME)
+// 0. UTILITIES (DEBOUNCE for Performance)
+// ==========================================
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => { clearTimeout(timeout); func(...args); };
+        clearTimeout(timeout); timeout = setTimeout(later, wait);
+    };
+}
+const debouncedApplyMasterFilters = debounce(() => renderMasterGrid(), 300);
+const debouncedRenderTeachersTab = debounce(() => renderTeachersTab(), 300);
+const debouncedRenderAssignments = debounce(() => renderAssignments(), 300);
+
+// ==========================================
+// 1. SUPABASE & CONSTANTS
 // ==========================================
 const SUPABASE_URL = 'https://vbbbwexxcctljhdavgnz.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiYmJ3ZXh4Y2N0bGpoZGF2Z256Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4OTAxODYsImV4cCI6MjA4ODQ2NjE4Nn0.PYIkE2qrzkKUcVm0KVzx3f2ZsCtuhDOH3BY06rjdy08';
-
-// កែឈ្មោះទៅជា 'sb' ដើម្បីកុំឲ្យជាន់គ្នាជាមួយ Library global 'supabase'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentUser = null;
-let userProfile = null;
-let currentVersionId = null; 
+let currentUser = null; let userProfile = null;
 
 const DEFAULT_SUBJECTS = [
-    {id:'S1',name:'គណិតវិទ្យា',code:'MATH',color:'hsl(0,70%,45%)'},
-    {id:'S2',name:'រូបវិទ្យា',code:'PHYS',color:'hsl(35,70%,45%)'},
-    {id:'S3',name:'គីមីវិទ្យា',code:'CHEM',color:'hsl(70,70%,45%)'},
-    {id:'S4',name:'ជីវវិទ្យា',code:'BIO',color:'hsl(105,70%,45%)'},
-    {id:'S5',name:'ភាសាខ្មែរ',code:'KHM',color:'hsl(140,70%,45%)'}
+    {id:'S1', name:'ភាសាខ្មែរ', code:'K', color:'hsl(0,70%,45%)'}, {id:'S2', name:'គណិតវិទ្យា', code:'M', color:'hsl(30,70%,45%)'},
+    {id:'S3', name:'រូបវិទ្យា', code:'P', color:'hsl(60,70%,45%)'}, {id:'S4', name:'គីមីវិទ្យា', code:'C', color:'hsl(90,70%,45%)'},
+    {id:'S5', name:'ជីវវិទ្យា', code:'B', color:'hsl(120,70%,45%)'}, {id:'S6', name:'ផែនដីវិទ្យា', code:'ES', color:'hsl(150,70%,45%)'},
+    {id:'S7', name:'ភូមិវិទ្យា', code:'G', color:'hsl(180,70%,45%)'}, {id:'S8', name:'ប្រវត្តិវិទ្យា', code:'H', color:'hsl(210,70%,45%)'},
+    {id:'S9', name:'ពលរដ្ឋ', code:'I', color:'hsl(240,70%,45%)'}, {id:'S10', name:'កុំព្យូទ័រ', code:'IT', color:'hsl(270,70%,45%)'},
+    {id:'S11', name:'អង់គ្លេស', code:'EN', color:'hsl(300,70%,45%)'}, {id:'S12', name:'កីឡា', code:'ED', color:'hsl(330,70%,45%)'}
 ];
 
+const DEFAULT_CLASSES = [
+    {id:'C1', name:'12A', type:'SC', shift:'FULL', isExtra: false}, {id:'C2', name:'12B', type:'SC', shift:'FULL', isExtra: false}, 
+    {id:'C3', name:'12C', type:'SS', shift:'FULL', isExtra: false}, {id:'C4', name:'11A', type:'SC', shift:'FULL', isExtra: false}, 
+    {id:'C5', name:'11B', type:'SS', shift:'FULL', isExtra: false}, {id:'C6', name:'10A', type:'GEN', shift:'FULL', isExtra: false}
+];
+
+const DAYS = [{id:'M',name:'ចន្ទ'},{id:'T',name:'អង្គារ'},{id:'W',name:'ពុធ'},{id:'Th',name:'ព្រហស្បតិ៍'},{id:'F',name:'សុក្រ'},{id:'S',name:'សៅរ៍'}];
+
 let state = {
-    schoolInfo: { department:'មន្ទីរអប់រំ យុវជន និងកីឡា', schoolName:'វិទ្យាល័យ...', principalName:'នាយកសាលា', academicYear:'២០២៤-២០២៥', logo:'', signature:'' },
-    timeSlots: ["7-8","8-9","9-10","10-11","11-12","1-2","2-3","3-4","4-5"],
-    classes: ['12A','12B','11A','11B','10A','9A'],
+    schoolInfo: { department:'មន្ទីរអប់រំ យុវជន និងកីឡា', schoolName:'សាលាថ្មី...', principalName:'នាយកសាលា', academicYear:'២០២៤-២០២៥', logo:'', signature:'' },
+    timeSlots: ["7-8","8-9","9-10","10-11","11-12","1-2","2-3","3-4","4-5"], // Index 0-4 = Morning, 5-8 = Afternoon
+    extraTimeSlotIndices: [], // Track which indices are "Special Slots"
+    blockedShifts: [], // Array of blocked shifts e.g. ['Th-AM', 'S-PM']
+    classes: JSON.parse(JSON.stringify(DEFAULT_CLASSES)),
     subjects: JSON.parse(JSON.stringify(DEFAULT_SUBJECTS)),
     subjectRules: {}, teachers: [], assignments: [], schedule: {}, activeTid: null, activeSubjId: null,
 };
 
-const DAYS = [{id:'mon',name:'ចន្ទ'},{id:'tue',name:'អង្គារ'},{id:'wed',name:'ពុធ'},{id:'thu',name:'ព្រហស្បតិ៍'},{id:'fri',name:'សុក្រ'},{id:'sat',name:'សៅរ៍'}];
-
-function getGrade(cls) { let m = cls.match(/\d+/); return m ? 'g'+m[0] : 'g12'; }
-
-// ==========================================
-// 2. AUTHENTICATION & INITIALIZATION
-// ==========================================
-async function checkAuth() {
-    const { data: { session } } = await sb.auth.getSession();
-    if(session) { currentUser = session.user; await fetchProfileAndInitialize(); } 
-    else { document.getElementById('auth-screen').classList.remove('hidden'); }
-}
-
-async function handleAuth(type) {
-    const email = document.getElementById('auth-email').value; 
-    const password = document.getElementById('auth-pass').value;
-    if(!email || !password) return Swal.fire('បញ្ហា', 'សូមវាយបញ្ចូល Email និង Password', 'warning');
+// -----------------------------------------------------------
+// មុខងារឆែកលក្ខខណ្ឌ (វេនរៀន ទូទាំងសាលា និងម៉ោងពិសេស)
+// -----------------------------------------------------------
+function isSlotAllowedForClass(className, dayId, timeIdx) {
+    const isMorning = timeIdx < 5;
     
-    document.getElementById('btn-login').innerText = 'កំពុងដំណើរការ...';
-    let result;
-    if(type === 'login') result = await sb.auth.signInWithPassword({ email, password });
-    else result = await sb.auth.signUp({ email, password });
-    
-    if(result.error) {
-        Swal.fire('បរាជ័យ', result.error.message, 'error');
-        document.getElementById('btn-login').innerText = 'ចូលប្រព័ន្ធ (Login)';
-    } else {
-        if(type==='signup') {
-            Swal.fire('ជោគជ័យ', 'ចុះឈ្មោះរួចរាល់ សូមឲ្យ Owner ផ្ដល់សិទ្ធិឲ្យអ្នកដើម្បីប្រើប្រាស់!', 'info');
-            document.getElementById('btn-login').innerText = 'ចូលប្រព័ន្ធ (Login)';
-        } else { 
-            currentUser = result.data.user; 
-            await fetchProfileAndInitialize(); 
-        }
+    // 1. Check Global Blocked Shifts (បិទការរៀនទូទាំងសាលាតាមថ្ងៃ-វេន)
+    const shiftKey = `${dayId}-${isMorning ? 'AM' : 'PM'}`;
+    if (state.blockedShifts && state.blockedShifts.includes(shiftKey)) return false;
+
+    // 2. Check Special Slots (ម៉ោងពិសេស)
+    const isSpecialSlot = state.extraTimeSlotIndices && state.extraTimeSlotIndices.includes(timeIdx);
+    const cls = state.classes.find(c => c.name === className);
+    if(!cls) return true;
+
+    if (isSpecialSlot) {
+        // បើម៉ោងហ្នឹងជាម៉ោងពិសេស, អនុញ្ញាតទាល់តែថ្នាក់នោះបានធីក `isExtra`
+        return !!cls.isExtra; 
     }
+
+    // 3. Check Normal Shift Logic (វេនព្រឹក វេនរសៀល)
+    const shift = cls.shift || 'FULL';
+    if (shift === 'MORNING' && !isMorning) return false;
+    if (shift === 'AFTERNOON' && isMorning) return false;
+
+    return true;
 }
 
+function getGradeType(clsName) {
+    const clsObj = state.classes.find(c => c.name === clsName); if(!clsObj) return 'g12_SC'; 
+    let m = clsName.match(/\d+/); let gNum = m ? m[0] : '12';
+    if(['11', '12'].includes(gNum)) return `g${gNum}_${clsObj.type}`; return `g${gNum}`;
+}
+function migrateState() { 
+    if(state.classes && state.classes.length > 0) {
+        if(typeof state.classes[0] === 'string') { 
+            state.classes = state.classes.map((c, i) => ({ id:'C'+Date.now()+i, name: c, type: c.includes('11')||c.includes('12') ? 'SC' : 'GEN', shift: 'FULL', isExtra: false })); 
+        } else {
+            state.classes.forEach(c => {
+                if(!c.shift) c.shift = 'FULL';
+                if(c.isExtra === undefined) c.isExtra = false;
+            });
+        }
+    } 
+    if(!state.extraTimeSlotIndices) state.extraTimeSlotIndices = [];
+    if(!state.blockedShifts) state.blockedShifts = [];
+}
+function downloadErrorReport(errorsArray, fileName) { if(errorsArray.length === 0) return; const ws = XLSX.utils.json_to_sheet(errorsArray); ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 50}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Errors"); XLSX.writeFile(wb, fileName); Swal.fire('មានកំហុសខ្លះ', 'សូមបើកឯកសារ Error Report Excel!', 'warning'); }
+
+// ==========================================
+// 2. AUTO-SAVE & AUTHENTICATION
+// ==========================================
+let saveTimeout;
+async function saveData() { document.getElementById('sync-status').innerText = '⏳ Saving...'; document.getElementById('sync-status').className = 'text-[10px] font-bold text-orange-500'; if(userProfile && userProfile.school_id) { clearTimeout(saveTimeout); saveTimeout = setTimeout(async () => { const { error } = await sb.from('schools').update({ live_data: state }).eq('id', userProfile.school_id); if(!error) { document.getElementById('sync-status').innerText = '🟢 Saved'; document.getElementById('sync-status').className = 'text-[10px] font-bold text-green-500'; } }, 1000); } }
+async function checkAuth() { const { data: { session } } = await sb.auth.getSession(); if(session) { currentUser = session.user; await fetchProfileAndInitialize(); } else { document.getElementById('auth-screen').classList.remove('hidden'); } }
+function switchAuth(type) { document.getElementById('login-form').classList.add('hidden'); document.getElementById('signup-form').classList.add('hidden'); document.getElementById('reset-form').classList.add('hidden'); document.getElementById('auth-title').innerText = type==='login' ? 'ចូលប្រើប្រាស់ប្រព័ន្ធ' : type==='signup' ? 'ចុះឈ្មោះគណនីថ្មី' : 'កំណត់លេខសម្ងាត់ថ្មី'; document.getElementById(type+'-form').classList.remove('hidden'); }
+async function handleLogin() { const email = document.getElementById('login-email').value; const password = document.getElementById('login-pass').value; if(!email || !password) return Swal.fire('បញ្ហា', 'សូមវាយបញ្ចូល Email និង Password', 'warning'); document.getElementById('btn-login').innerText = 'កំពុងដំណើរការ...'; const result = await sb.auth.signInWithPassword({ email, password }); if(result.error) { Swal.fire('បរាជ័យ', result.error.message, 'error'); document.getElementById('btn-login').innerText = 'ចូលប្រព័ន្ធ (Login)'; } else { currentUser = result.data.user; await fetchProfileAndInitialize(); } }
+async function handleSignup() { const email = document.getElementById('signup-email').value; const password = document.getElementById('signup-pass').value; const code = document.getElementById('signup-code').value.trim(); if(!email || password.length < 6 || !code) return Swal.fire('បញ្ហា', 'សូមបំពេញព័ត៌មាន និងកូដឲ្យត្រឹមត្រូវ', 'warning'); document.getElementById('btn-signup').innerText = 'កំពុងផ្ទៀងផ្ទាត់...'; const { data: inviteData } = await sb.from('invite_codes').select('*').eq('code', code).eq('is_used', false).single(); if(!inviteData) { document.getElementById('btn-signup').innerText = 'ចុះឈ្មោះគណនីថ្មី'; return Swal.fire('បរាជ័យ', 'កូដមិនត្រឹមត្រូវ ឬប្រើរួចហើយ។ ទាក់ទង @mrhonmom', 'error'); } const result = await sb.auth.signUp({ email, password }); if(result.error) { Swal.fire('បរាជ័យ', result.error.message, 'error'); document.getElementById('btn-signup').innerText = 'ចុះឈ្មោះគណនីថ្មី'; } else { await sb.from('invite_codes').update({ is_used: true }).eq('code', code); Swal.fire('ជោគជ័យ', 'ចុះឈ្មោះរួចរាល់! សូមប្រាប់ Owner ឲ្យរៀបចំសាលារៀនជូនអ្នក។', 'success'); switchAuth('login'); } }
+async function handleResetPassword() { const email = document.getElementById('reset-email').value; if(!email) return Swal.fire('បញ្ហា', 'សូមវាយអ៊ីមែលសិន', 'warning'); document.getElementById('btn-reset').innerText = 'កំពុងផ្ញើ...'; const { error } = await sb.auth.resetPasswordForEmail(email); if(error) Swal.fire('បរាជ័យ', error.message, 'error'); else Swal.fire('ជោគជ័យ', 'យើងបានផ្ញើ Link ទៅ Email របស់អ្នកហើយ។', 'success'); document.getElementById('btn-reset').innerText = 'ផ្ញើការស្នើសុំ'; }
 async function handleLogout() { await sb.auth.signOut(); location.reload(); }
 
 async function fetchProfileAndInitialize() {
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-    if(!profile) return Swal.fire('Error', 'Profile not found. Please wait for owner to approve.', 'error');
-    
-    userProfile = profile;
-    document.getElementById('user-info').innerText = `${profile.email} (${profile.role.toUpperCase()})`;
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-wrapper').classList.remove('hidden');
-
-    const allTabs = [
-        { id: 'master', label: 'តារាងរួម', role: ['owner', 'admin', 'user'] },
-        { id: 'teachers-tab', label: 'បញ្ជីគ្រូ', role: ['owner', 'admin'] },
-        { id: 'assignments', label: 'ចាត់តាំង', role: ['owner', 'admin'] },
-        { id: 'individual', label: 'ព្រីន', role: ['owner', 'admin', 'user'] },
-        { id: 'settings', label: 'ការកំណត់', role: ['owner', 'admin'] },
-        { id: 'data', label: '<i data-lucide="cloud" class="w-4 h-4"></i> Versions', role: ['owner', 'admin'] },
-        { id: 'owner-panel', label: '<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i> Owner', role: ['owner'] }
-    ];
-
-    let navHtml = '';
-    allTabs.forEach(t => {
-        if(t.role.includes(profile.role)) navHtml += `<button onclick="changeTab('${t.id}')" id="tab-${t.id}" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-white/50">${t.label}</button>`;
-    });
-    document.getElementById('nav-tabs-container').innerHTML = navHtml;
-
-    if(profile.role === 'owner' && !profile.school_id) {
-        changeTab('owner-panel');
-        loadOwnerData();
-    } else if (profile.school_id) {
-        await loadLatestVersion();
-        changeTab('master');
-    } else {
-        Swal.fire('រង់ចាំការអនុញ្ញាត', 'គណនីរបស់អ្នកមិនទាន់ត្រូវបានបញ្ជូលទៅក្នុងសាលាណាមួយនៅឡើយទេ។', 'info');
-    }
-    lucide.createIcons();
-}
-
-function changeTab(id) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById(id); if(target) target.classList.remove('hidden');
-    document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-white/50');
-    const btn = document.getElementById('tab-'+id); if(btn) btn.className = 'tab-btn active-tab px-4 py-2 rounded-lg text-sm font-bold bg-white shadow text-blue-600';
-    if(id==='master') renderMasterGrid(); 
-    if(id==='teachers-tab') renderTeachersTab(); 
-    if(id==='assignments') renderAssignments(); 
-    if(id==='settings') renderSettings(); 
-    if(id==='individual') renderIndividualDropdown(); 
-    if(id==='data') loadVersionsHistory(); 
-    if(id==='owner-panel') loadOwnerData();
-    lucide.createIcons();
-}
-
-// ==========================================
-// 3. CLOUD VERSION CONTROL (CORE)
-// ==========================================
-async function loadLatestVersion() {
-    if(!userProfile.school_id) return;
-    const { data: versions } = await sb.from('schedule_versions').select('*').eq('school_id', userProfile.school_id).order('created_at', { ascending: false }).limit(1);
-    
-    if(versions && versions.length > 0) applyVersion(versions[0]);
-    else {
-        state.schoolInfo.schoolName = "សាលាថ្មី (មិនទាន់ Save)";
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single(); userProfile = profile; document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-wrapper').classList.remove('hidden');
+    const allTabs = [ { id: 'settings', label: '០. ការកំណត់', role: ['owner', 'admin'] }, { id: 'standard-hours', label: '១. ម៉ោងស្តង់ដារ', role: ['owner', 'admin'] }, { id: 'teachers-tab', label: '២. បញ្ជីគ្រូ', role: ['owner', 'admin'] }, { id: 'assignments', label: '៣. ចាត់តាំង', role: ['owner', 'admin'] }, { id: 'master', label: '៤. តារាងរួម', role: ['owner', 'admin', 'user'] }, { id: 'individual', label: '៥. ព្រីន', role: ['owner', 'admin', 'user'] }, { id: 'owner-panel', label: '<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i> Owner', role: ['owner'] } ];
+    document.getElementById('nav-tabs-container').innerHTML = allTabs.filter(t=>t.role.includes(profile.role)).map(t=>`<button onclick="changeTab('${t.id}')" id="tab-${t.id}" class="tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-white/50 whitespace-nowrap">${t.label}</button>`).join('');
+    if(profile.role === 'owner' && !profile.school_id) { changeTab('owner-panel'); loadOwnerData(); } else if (profile.school_id) {
+        const { data: school } = await sb.from('schools').select('name, live_data').eq('id', profile.school_id).single();
+        if(school && school.live_data) { state = { ...state, ...school.live_data }; migrateState(); } else state.schoolInfo.schoolName = school.name; 
         document.getElementById('nav-school').innerText = '| ' + state.schoolInfo.schoolName;
-        renderSettings();
-    }
+        renderMasterGrid(); renderTeachersTab(); renderAssignments(); renderSettings(); renderRulesTab(); changeTab('settings');
+    } lucide.createIcons();
 }
+function changeTab(id) { document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); document.getElementById(id)?.classList.remove('hidden'); document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-4 py-2 rounded-lg text-sm font-bold text-slate-500 hover:bg-white/50 whitespace-nowrap'); let btn = document.getElementById('tab-'+id); if(btn) btn.className = 'tab-btn active-tab px-4 py-2 rounded-lg text-sm font-bold bg-white shadow text-blue-600 whitespace-nowrap'; if(id==='master') renderMasterGrid(); if(id==='teachers-tab') renderTeachersTab(); if(id==='assignments') renderAssignments(); if(id==='settings') renderSettings(); if(id==='standard-hours') renderRulesTab(); if(id==='individual') renderIndividualDropdown(); if(id==='owner-panel') loadOwnerData(); lucide.createIcons(); }
 
-function applyVersion(vData) {
-    state = { ...state, ...vData.data };
-    currentVersionId = vData.id;
-    document.getElementById('current-version-display').innerText = vData.version_name;
-    document.getElementById('current-version-display').className = "text-green-600 font-bold";
-    document.getElementById('nav-school').innerText = '| ' + state.schoolInfo.schoolName;
-    renderMasterGrid(); renderSettings();
-}
-
-async function saveVersionToCloud() {
-    if(!userProfile.school_id) return Swal.fire('Error', 'No school assigned', 'error');
-    const vName = document.getElementById('v-name').value;
-    const vDate = document.getElementById('v-date').value;
-    if(!vName || !vDate) return Swal.fire('បញ្ហា', 'សូមបំពេញឈ្មោះ Version និងកាលបរិច្ឆេទ', 'warning');
-    
-    Swal.fire({ title: 'កំពុង Save...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    
-    const { data, error } = await sb.from('schedule_versions').insert([{
-        school_id: userProfile.school_id, version_name: vName, effective_date: vDate, data: state, created_by: currentUser.id
-    }]).select();
-
-    if(error) Swal.fire('បរាជ័យ', error.message, 'error');
-    else {
-        currentVersionId = data[0].id;
-        document.getElementById('current-version-display').innerText = vName;
-        document.getElementById('current-version-display').className = "text-green-600 font-bold";
-        Swal.fire('ជោគជ័យ', 'រក្សាទុករួចរាល់', 'success');
-        document.getElementById('v-name').value = '';
-        loadVersionsHistory();
-    }
-}
-
-async function loadVersionsHistory() {
-    if(!userProfile.school_id) return;
-    const { data } = await sb.from('schedule_versions').select('id, version_name, effective_date, created_at').eq('school_id', userProfile.school_id).order('created_at', { ascending: false });
-    if(data) {
-        document.getElementById('versions-list').innerHTML = data.map(v => `
-            <div class="flex items-center justify-between p-4 bg-slate-50 border rounded-2xl ${v.id === currentVersionId ? 'border-blue-500 shadow-md ring-1 ring-blue-200' : 'border-slate-100'}">
-                <div><h4 class="font-bold text-blue-900">${v.version_name}</h4><p class="text-xs text-slate-500 mt-1">អនុវត្ត: ${v.effective_date} | Save: ${new Date(v.created_at).toLocaleDateString()}</p></div>
-                <button onclick="restoreSpecificVersion('${v.id}')" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-200">Load ប្រើ</button>
-            </div>`).join('');
-    }
-}
-
-async function restoreSpecificVersion(id) {
-    Swal.fire({ title: 'កំពុងទាញយក...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const { data } = await sb.from('schedule_versions').select('*').eq('id', id).single();
-    if(data) { applyVersion(data); Swal.fire('ជោគជ័យ', `បាន Load: ${data.version_name}`, 'success'); loadVersionsHistory(); }
-}
+function calculateTeacherLoad(t) { let actualHours = 0; for(let key in state.schedule) { let aid = state.schedule[key]; let ass = state.assignments.find(a => a.id == aid); if(ass && ass.tId === t.id) actualHours++; } let base = parseInt(t.dutyHours) || 18; let overtime = actualHours - base; return { actualHours, base, overtime: overtime > 0 ? overtime : 0 }; }
 
 // ==========================================
-// 4. OWNER PANEL LOGIC
+// 3. SETTINGS & CLASSES
 // ==========================================
-let allSchoolsCache = [];
-async function loadOwnerData() {
-    const { data: schools } = await sb.from('schools').select('*').order('created_at', { ascending: false });
-    allSchoolsCache = schools || [];
-    document.getElementById('owner-school-list').innerHTML = allSchoolsCache.map(s => `<div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center"><span class="font-bold text-sm text-blue-900">${s.name} <br><span class="text-[10px] text-slate-400 font-mono">${s.id}</span></span></div>`).join('');
-
-    const { data: profiles } = await sb.from('profiles').select('*, schools(name)').neq('role', 'owner');
-    document.getElementById('owner-user-list').innerHTML = (profiles||[]).map(p => `
-        <div class="p-4 bg-slate-50 border rounded-xl space-y-2">
-            <div class="flex justify-between items-center border-b pb-2"><span class="font-bold text-sm text-slate-800">${p.email}</span><span class="text-xs font-bold px-2 py-1 rounded bg-${p.role==='admin'?'green':'slate'}-100 text-${p.role==='admin'?'green':'slate'}-700 uppercase">${p.role}</span></div>
-            <div class="flex gap-2 items-end">
-                <div class="flex-1"><label class="text-[10px] font-bold text-slate-400">សាលារៀន</label><select id="sel-school-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="">-- អត់ទាន់មានសាលា --</option>${allSchoolsCache.map(s => `<option value="${s.id}" ${s.id===p.school_id?'selected':''}>${s.name}</option>`).join('')}</select></div>
-                <div class="w-24"><label class="text-[10px] font-bold text-slate-400">តួនាទី</label><select id="sel-role-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="user" ${p.role==='user'?'selected':''}>User</option><option value="admin" ${p.role==='admin'?'selected':''}>Admin</option></select></div>
-                <button onclick="updateUserRole('${p.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Save</button>
-            </div>
-        </div>`).join('');
-}
-async function createSchool() {
-    const { value: name } = await Swal.fire({ title: 'ឈ្មោះសាលាថ្មី', input: 'text', showCancelButton: true });
-    if(name) { await sb.from('schools').insert([{ name }]); loadOwnerData(); }
-}
-async function updateUserRole(pId) {
-    const sId = document.getElementById(`sel-school-${pId}`).value; const role = document.getElementById(`sel-role-${pId}`).value;
-    await sb.from('profiles').update({ role: role, school_id: sId || null }).eq('id', pId);
-    Swal.fire({toast:true, position:'top-end', icon:'success', title:'បានកែប្រែ', showConfirmButton:false, timer:1500}); loadOwnerData();
-}
-
-// ==========================================
-// 5. FULL UI LOGIC (Excel, Drag/Drop, Renders)
-// ==========================================
-
-// --- Settings & Subjects ---
 function renderSettings() {
-    document.getElementById('info-dept').value = state.schoolInfo.department; document.getElementById('info-school').value = state.schoolInfo.schoolName; document.getElementById('info-year').value = state.schoolInfo.academicYear; document.getElementById('info-principal').value = state.schoolInfo.principalName; document.getElementById('classes-input').value = state.classes.join(', ');
+    document.getElementById('info-dept').value = state.schoolInfo.department; document.getElementById('info-school').value = state.schoolInfo.schoolName; document.getElementById('info-year').value = state.schoolInfo.academicYear; document.getElementById('info-principal').value = state.schoolInfo.principalName; 
+    
+    // Render Time Slots Settings (បានកែសម្រួល UI ថ្មីទីនេះ)
+    document.getElementById('time-slots-container').innerHTML = state.timeSlots.map((ts, i) => {
+        const isExtra = state.extraTimeSlotIndices.includes(i);
+        return `
+        <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 p-2.5 rounded-xl transition-all ${isExtra ? 'ring-1 ring-orange-400 bg-orange-50/50' : ''}">
+            <span class="text-xs font-bold w-4 text-center ${isExtra ? 'text-orange-500' : 'text-slate-400'}">${i+1}</span>
+            <input value="${ts}" oninput="updateTimeSlot(${i}, this.value)" class="flex-1 min-w-0 p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400">
+            
+            <div class="flex flex-col items-center justify-center min-w-[50px] shrink-0">
+                <label class="relative inline-flex items-center cursor-pointer" title="កំណត់ជាម៉ោងពិសេស">
+                    <input type="checkbox" onchange="toggleExtraSlot(${i})" class="sr-only peer" ${isExtra ? 'checked' : ''}>
+                    <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[16px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+                <span class="text-[9px] font-bold mt-1 ${isExtra ? 'text-orange-600' : 'text-slate-400'}">${isExtra ? 'ម៉ោងពិសេស' : 'ធម្មតា'}</span>
+            </div>
+        </div>`;
+    }).join('');
+    
+    // Render Global Blocked Shifts Settings
+    document.getElementById('blocked-shifts-container').innerHTML = DAYS.map(d => `
+        <div class="border rounded bg-slate-50 text-center pb-1">
+            <div class="bg-slate-200 text-[10px] font-bold py-1 mb-1">${d.name}</div>
+            <label class="block text-[10px]"><input type="checkbox" onchange="toggleBlockedShift('${d.id}-AM')" ${state.blockedShifts.includes(d.id+'-AM')?'checked':''}> ព្រឹក</label>
+            <label class="block text-[10px]"><input type="checkbox" onchange="toggleBlockedShift('${d.id}-PM')" ${state.blockedShifts.includes(d.id+'-PM')?'checked':''}> រសៀល</label>
+        </div>`).join('');
+
+    document.getElementById('subject-manage-list').innerHTML = state.subjects.map(s => `<div class="grid grid-cols-12 gap-2 items-center bg-slate-50 p-1.5 rounded border"><div class="col-span-6"><input value="${s.name}" oninput="updateSubject('${s.id}', 'name', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold"></div><div class="col-span-4"><input value="${s.code}" oninput="updateSubject('${s.id}', 'code', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold text-center text-blue-600 uppercase"></div><div class="col-span-2 text-center"><button onclick="removeSubject('${s.id}')" class="text-red-400 hover:text-red-600 bg-white p-1 rounded border"><i data-lucide="trash" class="w-3 h-3"></i></button></div></div>`).join('');
+    
+    document.getElementById('class-manage-list').innerHTML = (state.classes||[]).map(c => `
+    <div class="grid grid-cols-12 gap-2 items-center bg-slate-50 p-1.5 rounded border">
+        <div class="col-span-3"><input value="${c.name}" oninput="updateClassObj('${c.id}', 'name', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold text-red-600 text-center"></div>
+        <div class="col-span-3"><select onchange="updateClassObj('${c.id}', 'type', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold outline-none text-center"><option value="SC" ${c.type==='SC'?'selected':''}>SC</option><option value="SS" ${c.type==='SS'?'selected':''}>SS</option><option value="GEN" ${c.type==='GEN'?'selected':''}>GEN</option></select></div>
+        <div class="col-span-3"><select onchange="updateClassObj('${c.id}', 'shift', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold outline-none"><option value="FULL" ${c.shift==='FULL'?'selected':''}>ពេញម៉ោង</option><option value="MORNING" ${c.shift==='MORNING'?'selected':''}>វេនព្រឹក</option><option value="AFTERNOON" ${c.shift==='AFTERNOON'?'selected':''}>វេនរសៀល</option></select></div>
+        <div class="col-span-2 text-center"><input type="checkbox" onchange="updateClassObj('${c.id}', 'isExtra', this.checked)" ${c.isExtra ? 'checked' : ''}></div>
+        <div class="col-span-1 text-center"><button onclick="removeClassObj('${c.id}')" class="text-red-400 hover:text-red-600 bg-white p-1 rounded border"><i data-lucide="trash" class="w-3 h-3"></i></button></div>
+    </div>`).join('');
+    
     if(state.schoolInfo.logo) { document.getElementById('preview-logo').src = state.schoolInfo.logo; document.getElementById('preview-logo').classList.remove('hidden'); }
     if(state.schoolInfo.signature) { document.getElementById('preview-signature').src = state.schoolInfo.signature; document.getElementById('preview-signature').classList.remove('hidden'); }
-    document.getElementById('time-slots-container').innerHTML = state.timeSlots.map((ts, i) => `<div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-400 w-4">${i+1}</span><input value="${ts}" onchange="updateTimeSlot(${i}, this.value)" class="flex-1 p-2 border rounded-lg text-sm font-bold outline-none"></div>`).join('');
-    
-    document.getElementById('subject-manage-list').innerHTML = state.subjects.map(s => `<div class="grid grid-cols-12 gap-2 items-center bg-slate-50 p-1.5 rounded border"><div class="col-span-6"><input value="${s.name}" onchange="updateSubject('${s.id}', 'name', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold"></div><div class="col-span-4"><input value="${s.code}" onchange="updateSubject('${s.id}', 'code', this.value)" class="w-full bg-white border p-1 rounded text-[11px] font-bold text-center text-blue-600 uppercase"></div><div class="col-span-2 text-center"><button onclick="removeSubject('${s.id}')" class="text-red-400 hover:text-red-600 bg-white p-1 rounded border"><i data-lucide="trash" class="w-3 h-3"></i></button></div></div>`).join('');
-
-    let rulesHtml = `<thead><tr class="bg-slate-100 font-moul text-[9px] uppercase"><th class="p-2 border text-left min-w-[80px]">មុខវិជ្ជា (កូដ)</th>${[7,8,9,10,11,12].map(g=>`<th class="p-2 border">ទី${g}</th>`).join('')}</tr></thead><tbody>`;
-    state.subjects.forEach(s => {
-        rulesHtml += `<tr><td class="p-1 border font-bold text-blue-700 bg-slate-50 text-[10px]">${s.name} (${s.code})</td>`;
-        [7,8,9,10,11,12].map(g => { const val = state.subjectRules[s.name] ? state.subjectRules[s.name]['g'+g] : 0; rulesHtml += `<td class="p-0 border"><input type="number" value="${val||0}" onchange="updateRule('${s.name}', 'g${g}', this.value)" class="w-full p-1 text-center outline-none bg-transparent font-bold text-xs text-blue-600"></td>`; });
-        rulesHtml += `</tr>`;
-    });
-    document.getElementById('rules-table').innerHTML = rulesHtml + `</tbody>`;
     lucide.createIcons();
 }
-
-function updateInfo(k, v) { state.schoolInfo[k] = v; if(k==='schoolName') document.getElementById('nav-school').innerText = '| ' + v; }
-function updateClasses(v) { state.classes = v.split(',').map(s=>s.trim()).filter(Boolean); }
-function updateTimeSlot(i, v) { state.timeSlots[i] = v; }
-function uploadImage(e, type) { const f = e.target.files[0]; if(f) { const r = new FileReader(); r.onload = (ev) => { state.schoolInfo[type] = ev.target.result; renderSettings(); }; r.readAsDataURL(f); } }
-function addSubjectBlank() { state.subjects.push({ id:'S'+Date.now(), name:'ថ្មី', code:'NEW', color:`hsl(${Math.random()*360}, 70%, 45%)` }); renderSettings(); }
-function updateSubject(id, key, val) { let s = state.subjects.find(x => x.id === id); if(s) { s[key] = val; renderSettings(); } }
-function removeSubject(id) { state.subjects = state.subjects.filter(s => s.id !== id); state.teachers.forEach(t => { if(t.subjectIds) t.subjectIds = t.subjectIds.filter(sid => sid !== id); }); state.assignments = state.assignments.filter(a => a.subjId !== id); for(let k in state.schedule) { if(!state.assignments.find(a=>a.id == state.schedule[k])) delete state.schedule[k]; } renderSettings(); }
-function updateRule(s, g, v) { if(!state.subjectRules[s]) state.subjectRules[s] = {}; state.subjectRules[s][g] = parseInt(v) || 0; }
-
-// --- Teachers Tab & Excel ---
-function renderTeachersTab() { 
-    document.getElementById('teacher-manage-list').innerHTML = state.teachers.map(t => {
-        const subjHtml = state.subjects.map(s => `<label class="flex items-center gap-1 text-[10px] font-bold bg-white p-1 border rounded cursor-pointer"><input type="checkbox" ${t.subjectIds?.includes(s.id)?'checked':''} onchange="updateTeacherSubject('${t.id}', '${s.id}', this.checked)"> ${s.code}</label>`).join('');
-        return `<div class="bg-slate-50 p-4 rounded-2xl border shadow-sm space-y-3"><div class="flex justify-between items-start"><input value="${t.name}" onchange="updateTeacher('${t.id}', 'name', this.value)" class="font-bold text-sm text-blue-900 bg-transparent border-b border-slate-300 outline-none w-2/3"><button onclick="removeTeacher('${t.id}')" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded-lg shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">មុខវិជ្ជា:</span><div class="flex flex-wrap gap-1 mt-1">${subjHtml}</div></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">ថ្ងៃ:</span><div class="flex flex-wrap gap-1 mt-1">${DAYS.map(d => `<button onclick="toggleDay('${t.id}', '${d.id}')" class="px-1.5 py-1 rounded text-[9px] font-bold ${t.availableDays.includes(d.id)?'bg-blue-600 text-white':'bg-white border text-slate-400'}">${d.name}</button>`).join('')}</div></div><div class="grid grid-cols-2 gap-1 p-2 bg-white border rounded-xl text-[9px]"><div class="flex justify-between items-center"><label><input type="checkbox" ${t.isHomeroom?'checked':''} onchange="updateTeacher('${t.id}', 'isHomeroom', this.checked)"> បន្ទុកថ្នាក់:</label><input type="number" value="${t.homeroomHours||4}" onchange="updateTeacher('${t.id}', 'homeroomHours', this.value)" class="w-8 border rounded text-center"></div><div class="flex justify-between items-center"><label>កម្រិត(+h):</label><input type="number" value="${t.multiLevelBonus||0}" onchange="updateTeacher('${t.id}', 'multiLevelBonus', parseInt(this.value))" class="w-8 border rounded text-center"></div><div class="col-span-2 flex justify-between items-center pt-1 border-t"><label><input type="checkbox" ${t.isTechLead?'checked':''} onchange="updateTeacher('${t.id}', 'isTechLead', this.checked)"> ប្រធានបច្ចេកទេស</label><select onchange="updateTeacher('${t.id}', 'baseMode', this.value)" class="outline-none bg-slate-100 rounded p-0.5"><option value="auto" ${t.baseMode==='auto'?'selected':''}>Auto</option><option value="none" ${t.baseMode==='none'?'selected':''}>គ្មាន</option></select></div></div></div>`
-    }).join(''); 
-    lucide.createIcons(); 
+function updateInfo(k, v) { state.schoolInfo[k] = v; if(k==='schoolName') document.getElementById('nav-school').innerText = '| ' + v; saveData(); } 
+function updateTimeSlot(i, v) { state.timeSlots[i] = v; saveData(); } 
+function toggleExtraSlot(i) { if(state.extraTimeSlotIndices.includes(i)) state.extraTimeSlotIndices = state.extraTimeSlotIndices.filter(x=>x!==i); else state.extraTimeSlotIndices.push(i); saveData(); renderSettings(); }
+function toggleBlockedShift(key) { if(state.blockedShifts.includes(key)) state.blockedShifts = state.blockedShifts.filter(x=>x!==key); else state.blockedShifts.push(key); saveData(); renderSettings(); }
+function uploadImage(e, type) { const f = e.target.files[0]; if(f) { const r = new FileReader(); r.onload = (ev) => { state.schoolInfo[type] = ev.target.result; saveData(); renderSettings(); }; r.readAsDataURL(f); } }
+function addClassBlank() { state.classes.push({ id:'C'+Date.now(), name:'ថ្មី', type:'GEN', shift:'FULL', isExtra:false }); saveData(); renderSettings(); } function updateClassObj(id, key, val) { let c = state.classes.find(x => x.id === id); if(c) { c[key] = val; saveData(); } } function removeClassObj(id) { const cls = state.classes.find(x => x.id === id); if(cls) { state.classes = state.classes.filter(c => c.id !== id); state.assignments = state.assignments.filter(a => a.className !== cls.name); for(let k in state.schedule) { if(k.startsWith(cls.name+'_')) delete state.schedule[k]; } saveData(); renderSettings(); } }
+function exportClassesExcel() { 
+    // Not implemented for brevity, can remain as previous version or simply disable export for classes
+    Swal.fire('Info', 'ចំណុចនេះមិនទាន់អាប់ដេត Excel Export ទេ។ សូមវាយបញ្ចូលផ្ទាល់។', 'info'); 
 }
-function updateTeacher(id, k, v) { let t = state.teachers.find(x=>x.id===id); t[k]=v; }
-function updateTeacherSubject(tid, sid, isChecked) { let t = state.teachers.find(x=>x.id===tid); if(!t.subjectIds) t.subjectIds = []; if(isChecked && !t.subjectIds.includes(sid)) t.subjectIds.push(sid); if(!isChecked) t.subjectIds = t.subjectIds.filter(id => id !== sid); }
-function addTeacherBlank() { state.teachers.unshift({ id:'T'+Date.now(), name:'គ្រូថ្មី', availableDays: DAYS.map(d=>d.id), subjectIds: [], isHomeroom:false, homeroomHours:4, isTechLead:false, baseMode:'auto' }); renderTeachersTab(); }
-function removeTeacher(id) { state.teachers = state.teachers.filter(t=>t.id!==id); state.assignments = state.assignments.filter(a=>a.tId!==id); for(let k in state.schedule) if(!state.assignments.find(a=>a.id == state.schedule[k])) delete state.schedule[k]; renderTeachersTab(); }
-function toggleDay(tid, did) { let t = state.teachers.find(x=>x.id===tid); if(t.availableDays.includes(did)) t.availableDays = t.availableDays.filter(d=>d!==did); else t.availableDays.push(did); renderTeachersTab(); }
-
-function exportTeachersExcel() {
-    const data = state.teachers.length ? state.teachers.map(t => ({ 'ឈ្មោះគ្រូ (Name)': t.name, 'កូដមុខវិជ្ជា (Subject Codes)': t.subjectIds.map(id => state.subjects.find(s=>s.id===id)?.code).join(','), 'ថ្ងៃបង្រៀន (Days)': t.availableDays.map(id => DAYS.find(d=>d.id===id)?.name).join(','), 'ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)': t.homeroomHours || 0, 'ម៉ោងច្រើនកម្រិត (Level hrs)': t.multiLevelBonus || 0, 'ប្រធានបច្ចេកទេស (Tech Lead)': t.isTechLead ? 'បាទ' : 'ទេ', 'កាតព្វកិច្ច (Duty)': t.baseMode === 'auto' ? 'Auto' : 'None' })) : [{ 'ឈ្មោះគ្រូ (Name)': 'ឧទាហរណ៍៖ សុខ សាន្ត', 'កូដមុខវិជ្ជា (Subject Codes)': 'MATH, PHYS', 'ថ្ងៃបង្រៀន (Days)': 'ចន្ទ, អង្គារ, ពុធ, ព្រហស្បតិ៍, សុក្រ', 'ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)': 4, 'ម៉ោងច្រើនកម្រិត (Level hrs)': 0, 'ប្រធានបច្ចេកទេស (Tech Lead)': 'ទេ', 'កាតព្វកិច្ច (Duty)': 'Auto' }];
-    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 30}, {wch: 35}, {wch: 25}, {wch: 25}, {wch: 25}, {wch: 25}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Teachers Data"); XLSX.writeFile(wb, "Teachers_Full_Data.xlsx");
+function importClassesExcel(e) { 
+     Swal.fire('Info', 'ចំណុចនេះមិនទាន់អាប់ដេត Excel Import ទេ។ សូមវាយបញ្ចូលផ្ទាល់។', 'info'); e.target.value = ''; 
 }
-function importTeachersExcel(e) {
-    const file = e.target.files[0]; if(!file) return; const r = new FileReader();
-    r.onload = function(evt) {
-        try {
-            const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0;
-            rows.forEach((r, idx) => {
-                const tName = r['ឈ្មោះគ្រូ (Name)'];
-                if(tName && typeof tName === 'string' && !tName.includes('ឧទាហរណ៍')) {
-                    let sIds = []; if(r['កូដមុខវិជ្ជា (Subject Codes)']) { r['កូដមុខវិជ្ជា (Subject Codes)'].toString().split(',').map(s=>s.trim().toUpperCase()).forEach(sc => { const found = state.subjects.find(s=>s.code.toUpperCase() === sc); if(found) sIds.push(found.id); }); }
-                    let dIds = []; if(r['ថ្ងៃបង្រៀន (Days)']) { r['ថ្ងៃបង្រៀន (Days)'].toString().split(',').map(d=>d.trim()).forEach(dn => { const found = DAYS.find(d=>d.name === dn); if(found) dIds.push(found.id); }); }
-                    if(dIds.length === 0) dIds = DAYS.map(d=>d.id);
-                    let tObj = state.teachers.find(t=>t.name === tName.trim());
-                    if(!tObj) { tObj = { id:'T'+Date.now()+idx, name: tName.trim() }; state.teachers.push(tObj); }
-                    tObj.subjectIds = sIds; tObj.availableDays = dIds; tObj.homeroomHours = parseInt(r['ម៉ោងបន្ទុកថ្នាក់ (Homeroom hrs)']) || 0; tObj.isHomeroom = tObj.homeroomHours > 0; tObj.multiLevelBonus = parseInt(r['ម៉ោងច្រើនកម្រិត (Level hrs)']) || 0; tObj.isTechLead = r['ប្រធានបច្ចេកទេស (Tech Lead)'] === 'បាទ'; tObj.baseMode = r['កាតព្វកិច្ច (Duty)'] === 'None' ? 'none' : 'auto'; c++;
-                }
-            });
-            if(c>0) { renderTeachersTab(); Swal.fire('ជោគជ័យ', `ទាញចូលគ្រូបាន ${c} នាក់`, 'success'); } else Swal.fire('បរាជ័យ', 'ទម្រង់ Excel ខុស', 'error');
-        } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហាអាន File', 'error'); }
-    }; r.readAsBinaryString(file); e.target.value = '';
-}
+function addSubjectBlank() { state.subjects.push({ id:'S'+Date.now(), name:'ថ្មី', code:'NEW', color:`hsl(${Math.random()*360}, 70%, 45%)` }); saveData(); renderSettings(); } function updateSubject(id, key, val) { let s = state.subjects.find(x => x.id === id); if(s) { s[key] = val; saveData(); } } function removeSubject(id) { state.subjects = state.subjects.filter(s => s.id !== id); state.teachers.forEach(t => { if(t.teacherSubjectCodes) t.teacherSubjectCodes = t.teacherSubjectCodes.filter(sc => sc.split('-')[0] !== id); }); saveData(); renderSettings(); }
 
-// --- Assignments Tab & Excel ---
+// ==========================================
+// 4. STANDARD HOURS TAB
+// ==========================================
+const RULES_COLUMNS = [ {key: 'g7', label: 'ទី7'}, {key: 'g8', label: 'ទី8'}, {key: 'g9', label: 'ទី9'}, {key: 'g10', label: 'ទី10'}, {key: 'g11_SC', label: 'ទី11-SC'}, {key: 'g11_SS', label: 'ទី11-SS'}, {key: 'g12_SC', label: 'ទី12-SC'}, {key: 'g12_SS', label: 'ទី12-SS'} ];
+function renderRulesTab() { let rulesHtml = `<thead><tr class="bg-indigo-100 font-moul text-[10px] uppercase"><th class="p-3 border border-indigo-200 text-left text-indigo-900 sticky left-0 z-10 bg-indigo-100">មុខវិជ្ជា (កូដ)</th>`; RULES_COLUMNS.forEach(c => { rulesHtml += `<th class="p-3 border border-indigo-200 text-indigo-900 w-16">${c.label}</th>` }); rulesHtml += `</tr></thead><tbody>`; state.subjects.forEach(s => { rulesHtml += `<tr class="hover:bg-indigo-50"><td class="p-2 border border-indigo-100 font-bold text-slate-700 bg-white sticky left-0 z-10">${s.name} <span class="text-[9px] text-slate-400">(${s.code})</span></td>`; RULES_COLUMNS.forEach(c => { const val = state.subjectRules[s.name] ? state.subjectRules[s.name][c.key] : 0; rulesHtml += `<td class="p-0 border border-indigo-100"><input type="number" value="${val||0}" onchange="updateRule('${s.name}', '${c.key}', this.value)" class="w-full p-2 text-center outline-none bg-transparent font-bold text-indigo-600 focus:bg-indigo-100"></td>`; }); rulesHtml += `</tr>`; }); document.getElementById('rules-table').innerHTML = rulesHtml + `</tbody>`; }
+function updateRule(s, g, v) { if(!state.subjectRules[s]) state.subjectRules[s] = {}; state.subjectRules[s][g] = parseInt(v) || 0; saveData(); }
+function exportRulesExcel() { let aoa = [ ['មុខវិជ្ជា', ...RULES_COLUMNS.map(c=>c.label)] ]; state.subjects.forEach(s => { let row = [s.name]; RULES_COLUMNS.forEach(c => { row.push(state.subjectRules[s.name] ? state.subjectRules[s.name][c.key] || 0 : 0); }); aoa.push(row); }); const ws = XLSX.utils.aoa_to_sheet(aoa); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Standard Hours"); XLSX.writeFile(wb, "Standard_Hours_Template.xlsx"); }
+function importRulesExcel(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = function(evt) { try { const aoa = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]], {header: 1}); let errors = []; for(let i=1; i<aoa.length; i++) { const sName = aoa[i][0]; if(sName && state.subjects.find(s=>s.name === sName)) { if(!state.subjectRules[sName]) state.subjectRules[sName] = {}; RULES_COLUMNS.forEach((c, idx) => { state.subjectRules[sName][c.key] = parseInt(aoa[i][idx+1]) || 0; }); } else if(sName) { errors.push({ 'Row': i+1, 'Error': 'រកមុខវិជ្ជាមិនឃើញ', 'Description': `មុខវិជ្ជា '${sName}' មិនមានក្នុងប្រព័ន្ធ` }); } } saveData(); renderRulesTab(); Swal.fire('ជោគជ័យ', 'ទាញចូលម៉ោងស្តង់ដាររួចរាល់', 'success'); if(errors.length>0) downloadErrorReport(errors, "Standard_Hours_Errors.xlsx"); } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហា File', 'error'); } }; r.readAsBinaryString(file); e.target.value = ''; }
+
+// ==========================================
+// 5. TEACHERS TAB
+// ==========================================
+function renderTeachersTab() { const searchTerm = (document.getElementById('search-teacher')?.value || '').toLowerCase(); const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(searchTerm) || (t.teacherSubjectCodes && t.teacherSubjectCodes.join(' ').toLowerCase().includes(searchTerm))); document.getElementById('teacher-manage-list').innerHTML = filteredTeachers.map(t => { const tCodesDisplay = (t.teacherSubjectCodes || []).map(tcode => { const baseCodeId = tcode.split('-')[0]; const uniqueStr = tcode.split('-')[1]; const baseSubj = state.subjects.find(s=>s.id===baseCodeId); return `<span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-blue-200">${baseSubj?.code}${uniqueStr}</span>`; }).join(' '); const clsOptions = `<option value="">(គ្មាន)</option>` + state.classes.map(c => `<option value="${c.name}" ${t.homeroomClass===c.name?'selected':''}>${c.name}</option>`).join(''); return `<div class="bg-slate-50 p-4 rounded-2xl border space-y-3"><div class="flex justify-between items-start"><input value="${t.name}" oninput="updateTeacher('${t.id}', 'name', this.value)" class="font-bold text-sm text-blue-900 bg-transparent border-b border-slate-300 outline-none w-2/3"><button onclick="removeTeacher('${t.id}')" class="text-red-400 hover:text-red-600 bg-white p-1.5 rounded shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">កូដមុខវិជ្ជាគ្រូ:</span><div class="flex flex-wrap gap-1 mt-1">${tCodesDisplay || '<span class="text-[9px] text-slate-400">សូម Import ពី Excel</span>'}</div></div><div><span class="text-[9px] font-bold text-slate-500 uppercase">ថ្ងៃបង្រៀន:</span><div class="flex flex-wrap gap-1 mt-1">${DAYS.map(d => `<button onclick="toggleDay('${t.id}', '${d.id}')" class="px-1.5 py-1 rounded text-[9px] font-bold ${t.availableDays.includes(d.id)?'bg-blue-600 text-white':'bg-white border text-slate-400'}">${d.name}</button>`).join('')}</div></div><div class="bg-white border rounded p-2 flex justify-between items-center gap-2"><div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block">បន្ទុកថ្នាក់:</label><select onchange="updateTeacher('${t.id}', 'homeroomClass', this.value)" class="w-full text-[11px] p-1 border rounded text-red-600 font-bold outline-none">${clsOptions}</select></div><div class="w-16"><label class="text-[10px] font-bold text-slate-500 block">កាតព្វកិច្ច:</label><input type="number" value="${t.dutyHours || 18}" oninput="updateTeacher('${t.id}', 'dutyHours', this.value)" class="w-full border rounded p-1 text-center text-xs font-bold text-blue-600 outline-none"></div></div></div>` }).join(''); lucide.createIcons(); }
+function updateTeacher(id, k, v) { let t = state.teachers.find(x=>x.id===id); t[k]=v; saveData(); } function addTeacherBlank() { state.teachers.unshift({ id:'T'+Date.now(), name:'គ្រូថ្មី', availableDays: DAYS.map(d=>d.id), teacherSubjectCodes: [], dutyHours: 18, homeroomClass: '' }); saveData(); renderTeachersTab(); } function removeTeacher(id) { state.teachers = state.teachers.filter(t=>t.id!==id); state.assignments = state.assignments.filter(a=>a.tId!==id); for(let k in state.schedule) if(!state.assignments.find(a=>a.id == state.schedule[k])) delete state.schedule[k]; saveData(); renderTeachersTab(); renderAssignments(); } function toggleDay(tid, did) { let t = state.teachers.find(x=>x.id===tid); if(t.availableDays.includes(did)) t.availableDays = t.availableDays.filter(d=>d!==did); else t.availableDays.push(did); saveData(); renderTeachersTab(); }
+function exportTeachersExcel() { const data = state.teachers.length ? state.teachers.map(t => { const friendlyCodes = (t.teacherSubjectCodes || []).map(tcode => { const baseCodeId = tcode.split('-')[0]; const uniqueStr = tcode.split('-')[1]; const baseSubj = state.subjects.find(s=>s.id===baseCodeId); return `${baseSubj?.code || ''}${uniqueStr}`; }).join(', '); return { 'ឈ្មោះគ្រូ': t.name, 'អក្សរកាត់មុខវិជ្ជា': friendlyCodes, 'ថ្ងៃបង្រៀន': t.availableDays.join(', '), 'ថ្នាក់បន្ទុក (Homeroom)': t.homeroomClass || '', 'ម៉ោងកាតព្វកិច្ច': t.dutyHours || 18 }; }) : [{ 'ឈ្មោះគ្រូ': 'ឧទាហរណ៍៖ កង ទិត្យ', 'អក្សរកាត់មុខវិជ្ជា': 'K2, H2', 'ថ្ងៃបង្រៀន': 'M, T, W, Th, F', 'ថ្នាក់បន្ទុក (Homeroom)': '10A', 'ម៉ោងកាតព្វកិច្ច': 13 }]; const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 25}, {wch: 20}, {wch: 20}, {wch: 15}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Teachers"); XLSX.writeFile(wb, "Teachers_Data.xlsx"); }
+function importTeachersExcel(e) { const file = e.target.files[0]; if(!file) return; const r = new FileReader(); r.onload = function(evt) { try { const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0; let errors = []; rows.forEach((r, idx) => { const tName = r['ឈ្មោះគ្រូ']; if(tName && !tName.includes('ឧទាហរណ៍')) { let teacherCodes = []; if(r['អក្សរកាត់មុខវិជ្ជា']) { r['អក្សរកាត់មុខវិជ្ជា'].toString().split(',').map(s=>s.trim().toUpperCase()).forEach(sc => { const match = sc.match(/^([A-Z]+)(\d*)$/); if(match) { const baseCode = match[1]; const uniqueStr = match[2]; const foundBase = state.subjects.find(s=>s.code.toUpperCase() === baseCode); if(foundBase) teacherCodes.push(`${foundBase.id}-${uniqueStr}`); else errors.push({'Row': idx+2, 'Error': 'កូដខុស', 'Description': `កូដ '${baseCode}' អត់មានទេ`}); } else errors.push({'Row': idx+2, 'Error': 'ទម្រង់កូដខុស', 'Description': `កូដ '${sc}' មិនត្រូវទម្រង់`}); }); } let dIds = []; if(r['ថ្ងៃបង្រៀន']) { r['ថ្ងៃបង្រៀន'].toString().split(',').map(d=>d.trim()).forEach(dn => { let found = DAYS.find(d=>d.id.toUpperCase() === dn.toUpperCase()); if(!found) found = DAYS.find(d=>d.name === dn); if(found) dIds.push(found.id); }); } if(dIds.length === 0) dIds = DAYS.map(d=>d.id); let tObj = state.teachers.find(t=>t.name === tName.trim()); if(!tObj) { tObj = { id:'T'+Date.now()+idx, name: tName.trim() }; state.teachers.push(tObj); } tObj.teacherSubjectCodes = teacherCodes; tObj.availableDays = dIds; tObj.dutyHours = parseInt(r['ម៉ោងកាតព្វកិច្ច']) || 18; const hrClass = r['ថ្នាក់បន្ទុក (Homeroom)']?.toString().trim(); if(hrClass && state.classes.find(c => c.name === hrClass)) tObj.homeroomClass = hrClass; else if(hrClass) errors.push({'Row': idx+2, 'Error': 'រកថ្នាក់មិនឃើញ', 'Description': `ថ្នាក់បន្ទុក '${hrClass}' អត់មានក្នុងបញ្ជីថ្នាក់ទេ`}); c++; } }); if(c>0) { saveData(); renderTeachersTab(); renderAssignments(); Swal.fire('ជោគជ័យ', `បញ្ចូលបាន ${c} នាក់`, 'success'); } if(errors.length>0) downloadErrorReport(errors, "Teachers_Error_Report.xlsx"); } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហា File', 'error'); } }; r.readAsBinaryString(file); e.target.value = ''; }
+
+// ==========================================
+// 6. ASSIGNMENTS TAB
+// ==========================================
 function renderAssignments() {
-    const tid = state.activeTid || (state.teachers[0]?.id);
-    document.getElementById('teacher-quick-list').innerHTML = state.teachers.map(t => `<button onclick="setAssignTeacher('${t.id}')" class="text-left px-2 py-1.5 rounded-lg border text-[11px] font-bold truncate ${tid===t.id ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100'}">${t.name}</button>`).join('') || '<div class="text-xs text-red-500 col-span-2">សូមបន្ថែមគ្រូសិន</div>';
+    const searchTerm = (document.getElementById('search-assign-teacher')?.value || '').toLowerCase();
+    const filteredTeachers = state.teachers.filter(t => t.name.toLowerCase().includes(searchTerm) || (t.teacherSubjectCodes && t.teacherSubjectCodes.join(' ').toLowerCase().includes(searchTerm)));
+
+    const tid = state.activeTid || (filteredTeachers[0]?.id);
+    document.getElementById('teacher-quick-list').innerHTML = filteredTeachers.map(t => `<button onclick="setAssignTeacher('${t.id}')" class="text-left px-2 py-1.5 rounded-lg border text-[11px] font-bold truncate ${tid===t.id ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}">${t.name}</button>`).join('') || '<div class="text-xs text-red-500 col-span-2">រកមិនឃើញ...</div>';
+    
     const t = state.teachers.find(x => x.id === tid); const sList = document.getElementById('selSubject');
-    if(t && t.subjectIds && t.subjectIds.length > 0) {
-        state.activeSubjId = state.activeSubjId && t.subjectIds.includes(state.activeSubjId) ? state.activeSubjId : t.subjectIds[0];
-        sList.innerHTML = t.subjectIds.map(sid => { const sObj = state.subjects.find(s => s.id === sid); return sObj ? `<option value="${sid}" ${state.activeSubjId===sid?'selected':''}>${sObj.name} (${sObj.code})</option>` : ''; }).join('');
-    } else { sList.innerHTML = '<option value="">(គ្មានមុខវិជ្ជា)</option>'; state.activeSubjId = null; }
-    document.getElementById('class-checks').innerHTML = state.classes.map(c => `<label class="flex items-center gap-1.5 bg-white p-1.5 border rounded-lg cursor-pointer text-[10px] font-bold hover:bg-blue-50"><input type="checkbox" name="c-check" value="${c}" onchange="autoFillHours()"> ${c}</label>`).join('');
-    document.getElementById('teacher-load-list').innerHTML = state.teachers.map(tc => {
+    if(t && t.teacherSubjectCodes && t.teacherSubjectCodes.length > 0) { 
+        state.activeSubjId = state.activeSubjId && t.teacherSubjectCodes.includes(state.activeSubjId) ? state.activeSubjId : t.teacherSubjectCodes[0]; 
+        sList.innerHTML = t.teacherSubjectCodes.map(tcode => { 
+            const baseCodeId = tcode.split('-')[0]; const uniqueStr = tcode.split('-')[1]; const sObj = state.subjects.find(s => s.id === baseCodeId); 
+            return sObj ? `<option value="${tcode}" ${state.activeSubjId===tcode?'selected':''}>${sObj.name} (${sObj.code}${uniqueStr})</option>` : ''; 
+        }).join(''); 
+    } else { sList.innerHTML = '<option value="">(គ្មានកូដមុខវិជ្ជា)</option>'; state.activeSubjId = null; }
+    
+    document.getElementById('class-checks').innerHTML = state.classes.map(c => `<label class="flex items-center gap-1.5 bg-white p-1.5 border rounded-lg cursor-pointer text-[10px] font-bold"><input type="checkbox" name="c-check" value="${c.name}"> ${c.name}</label>`).join('');
+    
+    document.getElementById('teacher-load-list').innerHTML = filteredTeachers.map(tc => {
         const load = calculateTeacherLoad(tc); const tAss = state.assignments.filter(a => a.tId === tc.id); let assHtml = '';
-        if(tc.subjectIds) { tc.subjectIds.forEach(sid => { const sObj = state.subjects.find(s => s.id === sid); const sAss = tAss.filter(a => a.subjId === sid); if(sAss.length > 0) { assHtml += `<div class="mb-2 border-l-2 border-slate-400 bg-white p-2 rounded-r-lg shadow-sm"><div class="text-[10px] font-bold text-slate-500 mb-1">${sObj?.name} (${sObj?.code})</div><div class="flex flex-wrap gap-1.5">${sAss.map(a => `<div class="bg-slate-50 border px-2 py-1 rounded text-[10px] flex items-center gap-1"><span class="font-bold text-red-600">${a.className}</span><span class="text-slate-600 bg-slate-200 px-1 rounded">${a.hours}h</span><button onclick="removeAssignment(${a.id})" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('')}</div></div>`; } }); }
-        return `<div class="bg-slate-100 p-4 rounded-2xl border flex flex-col md:flex-row gap-4"><div class="md:w-56 border-r pr-4"><div class="font-bold text-sm text-slate-800">${tc.name}</div><div class="grid grid-cols-2 gap-y-1 mt-2 text-[10px]"><span class="text-slate-500">បង្រៀន:</span><span class="font-bold text-right">${load.assignedHours} h</span><span class="text-slate-500">បន្ថែម:</span><span class="font-bold text-right text-green-600">+${load.reduction} h</span><span class="text-slate-500">កាតព្វកិច្ច:</span><span class="font-bold text-right">${load.base === 999 ? 'គ្មាន' : load.base + ' h'}</span></div><div class="mt-2 pt-2 border-t flex justify-between"><span class="text-[10px] font-bold text-slate-500">ម៉ោងលើស:</span><span class="text-lg font-bold ${load.overtime > 0 ? 'text-red-600' : 'text-slate-400'}">${load.overtime > 0 ? load.overtime : 0}</span></div></div><div class="flex-1 flex flex-col gap-1">${assHtml || '<p class="text-[10px] italic">មិនទាន់មានចាត់តាំង...</p>'}</div></div>`;
+        if(tc.teacherSubjectCodes) { 
+            tc.teacherSubjectCodes.forEach(tcode => { 
+                const baseCodeId = tcode.split('-')[0]; const uniqueStr = tcode.split('-')[1]; const sObj = state.subjects.find(s => s.id === baseCodeId); 
+                const sAss = tAss.filter(a => a.tcode === tcode); 
+                if(sAss.length > 0) { assHtml += `<div class="mb-2 border-l-2 border-blue-400 bg-white p-2 rounded-r-lg shadow-sm"><div class="text-[10px] font-bold text-blue-800 mb-1">មុខវិជ្ជា: ${sObj?.name} (${sObj?.code}${uniqueStr})</div><div class="flex flex-wrap gap-1.5">${sAss.map(a => `<div class="bg-blue-50 border border-blue-100 px-2 py-1 rounded text-[10px] flex items-center gap-1"><span class="font-bold text-red-600">${a.className}</span><span class="text-blue-600 bg-white px-1 border border-blue-200 rounded">${a.hours}ម៉ោង</span><button onclick="removeAssignment(${a.id})" class="text-blue-300 hover:text-red-500 ml-1"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('')}</div></div>`; } 
+            }); 
+        }
+        return `<div class="bg-slate-100 p-4 rounded-2xl border flex flex-col md:flex-row gap-4"><div class="md:w-48 border-r pr-4"><div class="font-bold text-sm text-slate-800">${tc.name} ${tc.homeroomClass ? `<span class="text-[9px] bg-red-100 text-red-600 px-1 rounded block mt-1">បន្ទុក ${tc.homeroomClass}</span>`:''}</div><div class="grid grid-cols-2 gap-y-1 mt-2 text-[10px]"><span class="text-slate-500">កាតព្វកិច្ច:</span><span class="font-bold text-right text-blue-600">${load.base} h</span><span class="text-slate-500">ជាក់ស្តែង:</span><span class="font-bold text-right">${load.actualHours} h</span></div><div class="mt-2 pt-2 border-t flex justify-between"><span class="text-[10px] font-bold text-slate-500">ម៉ោងលើស:</span><span class="text-lg font-bold ${load.overtime > 0 ? 'text-red-600' : 'text-slate-400'}">${load.overtime > 0 ? load.overtime : 0}</span></div></div><div class="flex-1 flex flex-col gap-1">${assHtml || '<p class="text-[10px] text-slate-400 italic">មិនទាន់មានចាត់តាំង...</p>'}</div></div>`;
     }).join(''); lucide.createIcons();
 }
-
 function setAssignTeacher(id) { state.activeTid = id; renderAssignments(); }
-function autoFillHours() {
-    const sid = document.getElementById('selSubject').value; const sObj = state.subjects.find(s=>s.id===sid);
-    const checked = Array.from(document.querySelectorAll('input[name="c-check"]:checked')).map(e=>e.value);
-    if(checked.length > 0 && sObj) {
-        const grade = getGrade(checked[0]); let h = state.subjectRules[sObj.name] ? state.subjectRules[sObj.name][grade] : 2;
-        document.getElementById('inpHours').value = h; document.getElementById('inpMax').value = (h >= 3) ? 2 : 1;
-    }
-}
-function bulkAdd() {
-    const tid = state.activeTid; const sid = document.getElementById('selSubject').value;
-    const checked = Array.from(document.querySelectorAll('input[name="c-check"]:checked')).map(e=>e.value);
-    const h = parseInt(document.getElementById('inpHours').value); const m = parseInt(document.getElementById('inpMax').value);
-    if(!tid || !sid || checked.length===0 || isNaN(h) || isNaN(m)) return Swal.fire('ខ្វះព័ត៌មាន', 'សូមបំពេញឲ្យគ្រប់គ្រាន់', 'warning'); 
-    checked.forEach(cls => { state.assignments = state.assignments.filter(a => !(a.tId===tid && a.subjId===sid && a.className===cls)); state.assignments.push({ id: Date.now()+Math.random(), tId: tid, subjId: sid, className: cls, hours: h, maxPerDay: m }); });
-    renderAssignments(); document.querySelectorAll('input[name="c-check"]').forEach(c => c.checked = false); Swal.fire({title:'ជោគជ័យ!', icon:'success', toast:true, position:'top-end', showConfirmButton:false, timer:1000});
-}
-function removeAssignment(id) { state.assignments = state.assignments.filter(a => a.id !== id); for(let k in state.schedule) if(state.schedule[k] == id) delete state.schedule[k]; renderAssignments(); }
 
-function calculateTeacherLoad(t) {
-    const tAss = state.assignments.filter(a => a.tId === t.id); const assignedHours = tAss.reduce((s, a) => s + a.hours, 0); let reduction = 0;
-    if(t.isHomeroom) reduction += (parseInt(t.homeroomHours) || 0); if(t.isTechLead) reduction += 2; if(t.multiLevelBonus) reduction += (parseInt(t.multiLevelBonus) || 0);
-    let base = t.baseMode === 'custom' ? t.customBase : (t.baseMode === 'none' ? 999 : 14);
-    if(t.baseMode === 'auto') { const grades = [...new Set(tAss.map(a => getGrade(a.className)))]; base = grades.some(g => ['g10','g11','g12'].includes(g)) ? 16 : 18; }
-    return { assignedHours, reduction, overtime: base === 999 ? 0 : (assignedHours + reduction) - base, base };
+function bulkAdd() {
+    const tid = state.activeTid; const tcode = document.getElementById('selSubject').value; const checked = Array.from(document.querySelectorAll('input[name="c-check"]:checked')).map(e=>e.value); const m = parseInt(document.getElementById('inpMax').value);
+    if(!tid || !tcode || checked.length===0 || isNaN(m)) return Swal.fire('ខ្វះ', 'សូមជ្រើសរើសមុខវិជ្ជា និងរើសថ្នាក់!', 'warning'); 
+    
+    const baseCodeId = tcode.split('-')[0]; const sObj = state.subjects.find(s=>s.id===baseCodeId);
+    let missingHours = false;
+    
+    checked.forEach(cls => { 
+        const gradeType = getGradeType(cls); let autoHours = state.subjectRules[sObj.name] ? state.subjectRules[sObj.name][gradeType] : 0;
+        if(autoHours > 0) {
+            state.assignments = state.assignments.filter(a => !(a.tId===tid && a.tcode===tcode && a.className===cls)); 
+            state.assignments.push({ id: Date.now()+Math.random(), tId: tid, subjId: baseCodeId, tcode: tcode, className: cls, hours: autoHours, maxPerDay: m }); 
+        } else { missingHours = true; }
+    });
+    
+    if(missingHours) Swal.fire('ចំណាំ', 'ថ្នាក់ខ្លះមិនមានម៉ោងស្តង់ដារ សូមទៅកំណត់ម៉ោងសិន!', 'info');
+    saveData(); renderAssignments(); document.querySelectorAll('input[name="c-check"]').forEach(c => c.checked = false);
 }
+function removeAssignment(id) { state.assignments = state.assignments.filter(a => a.id !== id); for(let k in state.schedule) if(state.schedule[k] == id) delete state.schedule[k]; saveData(); renderAssignments(); }
 
 function exportAssignmentsExcel() {
-    const data = state.assignments.length ? state.assignments.map(a => ({ 'ឈ្មោះគ្រូ (Teacher Name)': state.teachers.find(t=>t.id===a.tId)?.name || '', 'កូដមុខវិជ្ជា (Subject Code)': state.subjects.find(s=>s.id===a.subjId)?.code || '', 'ថ្នាក់រៀន (Classes)': a.className, 'ម៉ោងសរុប (Hours)': a.hours, 'Max/ថ្ងៃ': a.maxPerDay })) : [ { 'ឈ្មោះគ្រូ (Teacher Name)': 'ឧទាហរណ៍៖ សុខ សាន្ត', 'កូដមុខវិជ្ជា (Subject Code)': 'MATH', 'ថ្នាក់រៀន (Classes)': '12A, 12B', 'ម៉ោងសរុប (Hours)': 6, 'Max/ថ្ងៃ': 2 } ];
-    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 20}, {wch: 25}, {wch: 15}, {wch: 15}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Assignments"); XLSX.writeFile(wb, "Assignments_Template.xlsx");
+    let data = [];
+    if (state.assignments && state.assignments.length > 0) {
+        data = state.assignments.map(a => {
+            const uniqueStr = a.tcode.split('-')[1]; const sObj = state.subjects.find(s=>s.id===a.subjId); const friendlyCode = `${sObj?.code || ''}${uniqueStr}`;
+            return { 'ឈ្មោះគ្រូ': state.teachers.find(t=>t.id===a.tId)?.name || '', 'អក្សរកាត់មុខវិជ្ជា': friendlyCode, 'ថ្នាក់រៀន': a.className, 'Max/ថ្ងៃ': a.maxPerDay };
+        });
+    } else if (state.teachers && state.teachers.length > 0) {
+        state.teachers.forEach(t => {
+            if (t.teacherSubjectCodes && t.teacherSubjectCodes.length > 0) {
+                t.teacherSubjectCodes.forEach(tcode => {
+                    const baseCodeId = tcode.split('-')[0]; const uniqueStr = tcode.split('-')[1]; const sObj = state.subjects.find(s=>s.id===baseCodeId); const friendlyCode = `${sObj?.code || ''}${uniqueStr}`;
+                    data.push({ 'ឈ្មោះគ្រូ': t.name, 'អក្សរកាត់មុខវិជ្ជា': friendlyCode, 'ថ្នាក់រៀន': '', 'Max/ថ្ងៃ': 2 });
+                });
+            }
+        });
+    } else {
+        data = [ { 'ឈ្មោះគ្រូ': 'ឧទាហរណ៍៖ កង ទិត្យ', 'អក្សរកាត់មុខវិជ្ជា': 'K2', 'ថ្នាក់រៀន': '12A, 12B', 'Max/ថ្ងៃ': 2 } ];
+    }
+    const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch: 25}, {wch: 20}, {wch: 25}, {wch: 15}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Assignments"); XLSX.writeFile(wb, "Assignments_Template.xlsx");
 }
 
 function importAssignmentsExcel(e) {
     const file = e.target.files[0]; if(!file) return; const r = new FileReader();
     r.onload = function(evt) {
         try {
-            const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0; let errCount = 0;
-            rows.forEach(r => {
-                const tName = r['ឈ្មោះគ្រូ (Teacher Name)']; const sCode = r['កូដមុខវិជ្ជា (Subject Code)']; const classesStr = r['ថ្នាក់រៀន (Classes)']; const hrs = parseInt(r['ម៉ោងសរុប (Hours)']); const maxD = parseInt(r['Max/ថ្ងៃ']) || 2;
-                if(tName && sCode && classesStr && !isNaN(hrs) && !tName.includes('ឧទាហរណ៍')) {
-                    const t = state.teachers.find(x => x.name.trim() === tName.trim()); const s = state.subjects.find(x => x.code.trim().toUpperCase() === sCode.trim().toUpperCase());
-                    if(t && s) {
-                        if(!t.subjectIds) t.subjectIds = []; if(!t.subjectIds.includes(s.id)) t.subjectIds.push(s.id);
-                        classesStr.toString().split(',').map(cl => cl.trim()).filter(Boolean).forEach(cls => {
-                            if(state.classes.includes(cls)) { state.assignments = state.assignments.filter(a => !(a.tId===t.id && a.subjId===s.id && a.className===cls)); state.assignments.push({ id: Date.now()+Math.random(), tId: t.id, subjId: s.id, className: cls, hours: hrs, maxPerDay: maxD }); c++; } else errCount++;
-                        });
-                    } else errCount++;
+            const rows = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]]); let c = 0; let errors = [];
+            rows.forEach((r, idx) => {
+                const tName = r['ឈ្មោះគ្រូ']; const rawCode = r['អក្សរកាត់មុខវិជ្ជា']; const clsStr = r['ថ្នាក់រៀន']; const maxD = parseInt(r['Max/ថ្ងៃ']) || 2;
+                if(tName && rawCode && clsStr && !tName.includes('ឧទាហរណ៍')) {
+                    const t = state.teachers.find(x => x.name.trim() === tName.trim()); 
+                    const match = rawCode.toString().trim().match(/^([A-Za-z]+)(\d*)$/);
+                    if(t && match) {
+                        const baseCode = match[1].toUpperCase(); const uniqueStr = match[2]; const sObj = state.subjects.find(s=>s.code.toUpperCase() === baseCode);
+                        if(sObj) {
+                            const internalTcode = `${sObj.id}-${uniqueStr}`;
+                            if(!t.teacherSubjectCodes) t.teacherSubjectCodes = []; if(!t.teacherSubjectCodes.includes(internalTcode)) t.teacherSubjectCodes.push(internalTcode);
+                            
+                            clsStr.toString().split(',').map(cl => cl.trim()).filter(Boolean).forEach(cls => { 
+                                if(state.classes.find(c => c.name === cls)) { 
+                                    const gradeType = getGradeType(cls); let autoHours = state.subjectRules[sObj.name] ? state.subjectRules[sObj.name][gradeType] : 0;
+                                    if(autoHours > 0) {
+                                        state.assignments = state.assignments.filter(a => !(a.tId===t.id && a.tcode===internalTcode && a.className===cls)); 
+                                        state.assignments.push({ id: Date.now()+Math.random(), tId: t.id, subjId: sObj.id, tcode: internalTcode, className: cls, hours: autoHours, maxPerDay: maxD }); 
+                                        c++; 
+                                    } else { errors.push({'Row': idx+2, 'Error': 'គ្មានម៉ោងស្តង់ដារ', 'Description': `មុខវិជ្ជា ${sObj.name} អត់ម៉ោងសម្រាប់ថ្នាក់ ${cls}`}); }
+                                } else errors.push({'Row': idx+2, 'Error': 'ខុសថ្នាក់រៀន', 'Description': `ថ្នាក់ '${cls}' មិនមានក្នុងប្រព័ន្ធ`});
+                            });
+                        } else errors.push({'Row': idx+2, 'Error': 'ខុសកូដ', 'Description': `រកមុខវិជ្ជាកូដ '${baseCode}' មិនឃើញ`});
+                    } else errors.push({'Row': idx+2, 'Error': 'ខុសឈ្មោះ', 'Description': `រកគ្រូឈ្មោះ '${tName}' មិនឃើញ`});
                 }
             });
-            renderAssignments(); if(c>0) Swal.fire('ជោគជ័យ', `បញ្ចូលបាន ${c} ថ្នាក់។ (រកមិនឃើញ: ${errCount})`, 'success'); else Swal.fire('បរាជ័យ', 'មិនត្រឹមត្រូវ', 'error');
-        } catch(err) { Swal.fire('បរាជ័យ', 'មានបញ្ហាក្នុងការអាន File', 'error'); }
+            if(c>0) { saveData(); renderAssignments(); Swal.fire('ជោគជ័យ', `បញ្ចូលបាន ${c} ការចាត់តាំង`, 'success'); }
+            if(errors.length>0) downloadErrorReport(errors, "Assignments_Errors.xlsx");
+        } catch(err) { Swal.fire('បរាជ័យ', 'បញ្ហា File', 'error'); }
     }; r.readAsBinaryString(file); e.target.value = '';
 }
 
-// --- Master Grid & AI ---
+// ==========================================
+// 7. MASTER GRID & SMART AI SWAPPING
+// ==========================================
 function renderMasterGrid() {
+    const searchTerm = (document.getElementById('search-master')?.value || '').toLowerCase(); 
+    const filterClass = (document.getElementById('filter-class')?.value || '').toLowerCase();
+    
+    // Performance Optimization: Build Hash Maps to avoid .find() in loops
+    const tMap = {}; state.teachers.forEach(t => tMap[t.id] = t);
+    const sMap = {}; state.subjects.forEach(s => sMap[s.id] = s);
+    const aMap = {}; state.assignments.forEach(a => aMap[a.id] = a);
+
     const head = document.getElementById('master-thead'); const body = document.getElementById('master-tbody');
-    let tr1 = `<tr class="bg-slate-800 text-white font-moul text-[10px]"><th rowspan="2" class="p-3 border border-slate-700 sticky left-0 z-50 bg-slate-800">ថ្នាក់</th>`;
-    let tr2 = `<tr class="bg-slate-100 font-bold text-[9px]">`;
-    DAYS.forEach(d => { tr1 += `<th colspan="${state.timeSlots.length}" class="p-2 border border-slate-700 uppercase tracking-widest">${d.name}</th>`; state.timeSlots.forEach((ts, i) => tr2 += `<th class="p-1 border border-slate-200 min-w-[65px] ${i===5?'border-l-4 border-l-slate-400':''}">${ts}</th>`); });
-    head.innerHTML = tr1 + `</tr>` + tr2 + `</tr>`;
-    body.innerHTML = state.classes.map(cls => {
-        let row = `<tr class="h-[60px] hover:bg-slate-50"><td class="sticky left-0 z-40 bg-white border border-slate-200 font-bold text-red-600 text-xs shadow-sm px-2">${cls}</td>`;
+    
+    let tr1 = `<tr><th rowspan="2" class="p-2 border border-slate-700 w-10">ម៉ោង<br>សរុប</th><th rowspan="2" class="p-2 border border-slate-700 w-8">ល.រ</th><th rowspan="2" class="p-2 border border-slate-700 w-12">ថ្នាក់</th><th rowspan="2" class="p-2 border border-slate-700 min-w-[100px]">គ្រូបន្ទុកថ្នាក់</th>`;
+    let tr2 = `<tr>`; DAYS.forEach(d => { tr1 += `<th colspan="${state.timeSlots.length}" class="p-2 border border-slate-700 uppercase tracking-widest">${d.name}</th>`; state.timeSlots.forEach((ts, i) => tr2 += `<th class="p-1 border border-slate-200 min-w-[65px] font-normal">${ts}</th>`); }); head.innerHTML = tr1 + `</tr>` + tr2 + `</tr>`;
+    
+    body.innerHTML = state.classes.map((clsObj, idx) => {
+        const cls = clsObj.name; if(filterClass && !cls.toLowerCase().includes(filterClass)) return '';
+        let totalH = state.assignments.filter(a => a.className === cls).reduce((sum, a) => sum + a.hours, 0); 
+        // Find Homeroom Teacher manually here as it's outside the heavy loop
+        let hrTeacher = state.teachers.find(t => t.homeroomClass === cls); let hrName = hrTeacher ? hrTeacher.name : '';
+        
+        let row = `<tr class="h-[60px] hover:bg-slate-50 transition-colors"><td class="font-bold text-slate-500">${totalH}</td><td class="text-slate-400">${idx + 1}</td><td class="class-name">${cls}</td><td class="text-left px-2 text-[11px] font-bold text-blue-900">${hrName}</td>`;
+            
         DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => {
-            const key = `${cls}_${d.id}_${i}`; const aid = state.schedule[key]; let content = '';
-            if(aid) { const a = state.assignments.find(x => x.id == aid); if(a) { const s = state.subjects.find(x => x.id === a.subjId); content = `<div draggable="true" ondragstart="handleDragStart(event,'${key}',${a.id})" class="w-full h-full flex flex-col justify-center items-center text-white p-1 rounded-sm cursor-grab shadow-inner hover:opacity-90 transition-all" style="background:${s?.color}"><b class="text-[11px] drop-shadow-sm tracking-wide">${s?.code}</b><span class="text-[8px] mt-1 truncate w-full text-center">${state.teachers.find(x=>x.id===a.tId)?.name}</span></div>`; } }
-            row += `<td class="border dropzone ${i===5?'border-l-4 border-l-slate-400':''}" ondragover="allowDrop(event)" ondrop="handleDrop(event,'${key}')" data-class="${cls}" data-day="${d.id}">${content}</td>`;
+            const key = `${cls}_${d.id}_${i}`; const aid = state.schedule[key]; let content = ''; let highlightClass = '';
+
+            let isAllowed = isSlotAllowedForClass(cls, d.id, i);
+            let cellClass = !isAllowed ? 'blocked-slot' : 'dropzone';
+
+            if(aid) { 
+                const a = aMap[aid]; 
+                if(a) { 
+                    const s = sMap[a.subjId]; const t = tMap[a.tId]; const uniqueStr = a.tcode.split('-')[1];
+                    if(searchTerm && (t.name.toLowerCase().includes(searchTerm) || (s.code+uniqueStr).toLowerCase().includes(searchTerm))) { highlightClass = 'highlighted'; } else if (searchTerm) { highlightClass = 'dimmed'; }
+                    content = `<div draggable="true" ondragstart="handleDragStart(event,'${key}',${a.id})" class="w-full h-full flex flex-col justify-center items-center text-white p-1 rounded-sm cursor-grab shadow-inner transition-all ${highlightClass}" style="background:${s?.color}"><b class="text-[12px] drop-shadow-sm tracking-wide">${s?.code}${uniqueStr}</b><span class="text-[8px] mt-1 truncate w-full text-center opacity-90">${t?.name}</span></div>`; 
+                } 
+            }
+            row += `<td class="border ${cellClass}" ondragover="allowDrop(event)" ondrop="handleDrop(event,'${key}')" data-class="${cls}" data-day="${d.id}" data-timeidx="${i}">${content}</td>`;
         });}); return row + `</tr>`;
-    }).join(''); updateWaitBox();
+    }).join(''); 
+    updateWaitBox(tMap, sMap);
 }
-function updateWaitBox() {
+
+function updateWaitBox(tMap, sMap) {
+    if(!tMap) {
+        tMap = {}; state.teachers.forEach(t => tMap[t.id] = t);
+        sMap = {}; state.subjects.forEach(s => sMap[s.id] = s);
+    }
+
     const un = []; state.assignments.forEach(a => { let p = Object.values(state.schedule).filter(v => v == a.id).length; if(a.hours - p > 0) un.push({...a, left: a.hours-p}); });
     document.getElementById('wait-count').innerText = un.reduce((s,x)=>s+x.left, 0);
-    document.getElementById('waiting-content').innerHTML = un.map(a => `<div draggable="true" ondragstart="handleDragStart(event,null,${a.id})" class="px-2 py-1 rounded text-white font-bold text-[10px] cursor-grab flex items-center gap-1 shadow-sm" style="background:${state.subjects.find(s=>s.id===a.subjId)?.color}">${state.subjects.find(s=>s.id===a.subjId)?.code} (${a.className}) <span class="bg-black/30 px-1 py-0.5 rounded-full">${a.left}</span></div>`).join('');
+    
+    document.getElementById('waiting-content').innerHTML = un.map(a => {
+        const uniqueStr = a.tcode.split('-')[1]; const s = sMap[a.subjId]; const t = tMap[a.tId];
+        
+        let freeSlots = 0; let suggestionStr = "<span style='color:#86efac; font-weight:bold; font-size:12px; margin-bottom:5px; display:block;'>អាចដាក់នៅម៉ោង៖</span>";
+        t.availableDays.forEach(day => {
+            let dayStr = "";
+            for(let i=0; i<state.timeSlots.length; i++) {
+                if(!isSlotAllowedForClass(a.className, day, i)) continue;
+
+                let isBusy = false;
+                for(let k in state.schedule) { if(k.includes(`_${day}_${i}`)) { const checkAss = state.assignments.find(x => x.id == state.schedule[k]); if(checkAss && checkAss.tId === t.id) isBusy = true; } }
+                if(!isBusy) { freeSlots++; if(freeSlots<=6) dayStr += `${i+1}, `; }
+            }
+            if(dayStr !== "") suggestionStr += `• ${DAYS.find(d=>d.id===day)?.name}: ${dayStr.slice(0,-2)}<br>`;
+        });
+        if(freeSlots === 0) suggestionStr = "<span style='color:#fca5a5; font-weight:bold;'>⚠️ គ្រូនេះពេញម៉ោងរវល់ហើយ ឬខុសលក្ខខណ្ឌវេនរៀន!</span>";
+
+        return `
+        <div class="tooltip-wrapper">
+            <div draggable="true" ondragstart="handleDragStart(event,null,${a.id})" class="px-2 py-1 rounded text-white font-bold text-[10px] cursor-grab flex items-center gap-1 shadow-sm" style="background:${s?.color}">
+                ${s?.code}${uniqueStr} (${a.className}) <span class="bg-black/30 px-1 py-0.5 rounded-full">${a.left}</span>
+            </div>
+            <div class="tooltip-text">
+                <div style="font-weight:bold; font-size:12px; margin-bottom:5px; border-bottom:1px solid #334155; padding-bottom:5px;">${t.name}</div>
+                ${suggestionStr}
+            </div>
+        </div>`;
+    }).join('');
 }
+
 let dragData = null;
-function handleDragStart(e, skey, aid) { dragData = { skey, aid }; const a = state.assignments.find(x=>x.id==aid); const t = state.teachers.find(x=>x.id===a.tId); document.querySelectorAll('.dropzone').forEach(td => { if(td.dataset.class === a.className && t.availableDays.includes(td.dataset.day)) td.classList.add('valid-drop'); }); }
-function allowDrop(e) { e.preventDefault(); e.target.closest('.dropzone')?.classList.add('drag-over'); }
-function handleDrop(e, tkey) { e.preventDefault(); document.querySelectorAll('.valid-drop, .drag-over').forEach(el=>el.classList.remove('valid-drop','drag-over')); if(!dragData) return; const { skey, aid } = dragData; const newSch = {...state.schedule}; if(skey) delete newSch[skey]; newSch[tkey] = aid; state.schedule = newSch; renderMasterGrid(); dragData = null; }
+
+function handleDragStart(e, skey, aid) { 
+    dragData = { skey, aid }; const a = state.assignments.find(x=>x.id==aid); const t = state.teachers.find(x=>x.id===a.tId); 
+    
+    document.querySelectorAll('.dropzone, .blocked-slot').forEach(td => { 
+        if(td.classList.contains('blocked-slot')) return; // ignore blocked slots
+
+        const tDay = td.dataset.day; const tClass = td.dataset.class; const tTimeIdx = td.dataset.timeidx;
+
+        if(!isSlotAllowedForClass(tClass, tDay, parseInt(tTimeIdx))) { td.classList.add('invalid-drop'); return; }
+
+        if(tClass !== a.className) { td.classList.add('invalid-drop'); return; }
+        if(!t.availableDays.includes(tDay)) { td.classList.add('invalid-drop'); return; }
+
+        let isConflict = false;
+        for(let k in state.schedule) {
+            if(k.includes(`_${tDay}_${tTimeIdx}`) && k !== skey) { 
+                const checkAss = state.assignments.find(x => x.id == state.schedule[k]);
+                if(checkAss && checkAss.tId === t.id) isConflict = true;
+            }
+        }
+        if(isConflict) td.classList.add('invalid-drop'); else td.classList.add('valid-drop'); 
+    }); 
+}
+
+function allowDrop(e) { if(e.target.closest('.valid-drop')) { e.preventDefault(); e.target.closest('.valid-drop').classList.add('drag-over'); } }
+
+function handleDrop(e, tkey) { 
+    e.preventDefault(); document.querySelectorAll('.valid-drop, .drag-over, .invalid-drop').forEach(el=>el.classList.remove('valid-drop','drag-over','invalid-drop')); 
+    if(!dragData) return; const dropzone = e.target.closest('.dropzone');
+    if(dropzone && !dropzone.classList.contains('invalid-drop')) {
+        const { skey, aid } = dragData; const newSch = {...state.schedule}; 
+        if(newSch[tkey]) { const oldAid = newSch[tkey]; if(skey) { newSch[skey] = oldAid; } else { delete newSch[tkey]; } } else { if(skey) delete newSch[skey]; }
+        newSch[tkey] = aid; state.schedule = newSch; resolveConflicts(); saveData(); 
+    } renderMasterGrid(); dragData = null; 
+}
+document.addEventListener('dragend', () => { document.querySelectorAll('.valid-drop, .drag-over, .invalid-drop').forEach(el=>el.classList.remove('valid-drop','drag-over','invalid-drop')); dragData = null; });
+
+function clearSchedule() { Swal.fire({ title:'ជម្រះតារាង?', text:'កាលវិភាគនឹងត្រូវលុបចោលទាំងអស់ ធ្លាក់ចូលប្រអប់រង់ចាំវិញ!', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33' }).then(res => { if(res.isConfirmed) { state.schedule = {}; saveData(); renderMasterGrid(); } }); }
+
+function resolveConflicts() {
+    let resolved = false;
+    DAYS.forEach(d => {
+        for(let i=0; i<state.timeSlots.length; i++) {
+            let teachersInSlot = [];
+            for(let key in state.schedule) {
+                if(key.includes(`_${d.id}_${i}`)) {
+                    const aid = state.schedule[key]; const ass = state.assignments.find(a => a.id == aid);
+                    if(ass) { if(teachersInSlot.includes(ass.tId)) { delete state.schedule[key]; resolved = true; } else { teachersInSlot.push(ass.tId); } }
+                }
+            }
+        }
+    });
+}
 
 function generateAutoSchedule() {
-    Swal.fire({ title:'រៀបអូតូ', text:'លុបកាលវិភាគចាស់ចេញ រៀបថ្មីទាំងអស់?', icon:'warning', showCancelButton:true, confirmButtonColor:'#9333ea' }).then(res => {
+    Swal.fire({ title:'រៀបអូតូ (AI Smart)', text:'កាលវិភាគចាស់នឹងត្រូវលុបចោល តើអ្នកយល់ព្រមទេ?', icon:'warning', showCancelButton:true }).then(res => {
         if(res.isConfirmed) {
-            let ns = {}; [...state.assignments].sort((a,b) => b.hours - a.hours).forEach(ass => {
-                const t = state.teachers.find(x=>x.id===ass.tId); let pl = 0; let shuffledDays = [...t.availableDays].sort(()=>Math.random()-0.5);
+            let ns = {}; 
+            
+            function getFlexibility(ass) {
+                const t = state.teachers.find(x => x.id === ass.tId);
+                return t ? t.availableDays.length : 6;
+            }
+
+            let blocksToPlace = [];
+            state.assignments.forEach(ass => {
+                for(let i=0; i<ass.hours; i++) blocksToPlace.push(ass);
+            });
+
+            blocksToPlace.sort((a, b) => {
+                let flexA = getFlexibility(a);
+                let flexB = getFlexibility(b);
+                if (flexA !== flexB) return flexA - flexB;
+                return b.hours - a.hours;
+            });
+
+            let retryLimit = blocksToPlace.length * 3; 
+            let loops = 0;
+
+            while(blocksToPlace.length > 0 && loops < retryLimit) {
+                loops++;
+                let ass = blocksToPlace.shift();
+                const t = state.teachers.find(x=>x.id===ass.tId);
+                let placed = false;
+                
+                let shuffledDays = [...t.availableDays].sort(()=>Math.random()-0.5);
+
                 for(let day of shuffledDays) {
-                    if(pl >= ass.hours) break; let tc = 0; for(let i=0; i<state.timeSlots.length; i++) if(ns[`${ass.className}_${day}_${i}`] === ass.id) tc++;
-                    if(tc >= ass.maxPerDay) continue;
+                    if (placed) break;
+
+                    let countToday = 0;
                     for(let i=0; i<state.timeSlots.length; i++) {
-                        const key = `${ass.className}_${day}_${i}`; if(ns[key]) continue;
-                        let conflict = false; for(let k in ns) if(k.includes(`_${day}_${i}`) && state.assignments.find(x=>x.id===ns[k])?.tId === t.id) conflict = true;
-                        if(!conflict) { ns[key] = ass.id; pl++; break; }
+                        if(ns[`${ass.className}_${day}_${i}`] === ass.id) countToday++;
+                    }
+                    if (countToday >= ass.maxPerDay) continue; 
+
+                    for(let i=0; i<state.timeSlots.length; i++) {
+                        if (!isSlotAllowedForClass(ass.className, day, i)) continue;
+
+                        const key = `${ass.className}_${day}_${i}`;
+                        
+                        let teacherBusy = false; 
+                        for(let k in ns) {
+                            if(k.includes(`_${day}_${i}`) && state.assignments.find(x=>x.id===ns[k])?.tId === t.id) {
+                                teacherBusy = true; break;
+                            }
+                        }
+                        if(teacherBusy) continue; 
+
+                        if (!ns[key]) {
+                            ns[key] = ass.id;
+                            placed = true;
+                            break;
+                        } else {
+                            let occupyingAss = state.assignments.find(x => x.id === ns[key]);
+                            if (occupyingAss) {
+                                if (getFlexibility(occupyingAss) > getFlexibility(ass)) {
+                                    blocksToPlace.push(occupyingAss);
+                                    ns[key] = ass.id;
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
-            }); state.schedule = ns; renderMasterGrid();
+            } 
+            
+            state.schedule = ns; 
+            saveData(); 
+            renderMasterGrid();
+            
+            if(blocksToPlace.length > 0) {
+                Swal.fire('ចំណាំ', `មាន ${blocksToPlace.length} ម៉ោងរៀបមិនចូលដោយស្វ័យប្រវត្តិ។ សូមពិនិត្យប្រអប់ "រង់ចាំ" និងអូសទម្លាក់ដោយដៃ។`, 'info');
+            } else {
+                Swal.fire('ជោគជ័យ', 'រៀបកាលវិភាគស្វ័យប្រវត្តិរួចរាល់', 'success');
+            }
         }
     });
 }
 
 function exportMasterExcel() {
-    let aoa = [ ['ថ្នាក់'] ]; let row2 = [''];
-    DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { if(i===0) aoa[0].push(d.name); else aoa[0].push(''); row2.push(ts); }); }); aoa.push(row2);
-    state.classes.forEach(cls => {
-        let r = [cls];
-        DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { const aid = state.schedule[`${cls}_${d.id}_${i}`]; if(aid) { const ass = state.assignments.find(a=>a.id==aid); r.push(`${state.subjects.find(x=>x.id===ass.subjId)?.code} (${state.teachers.find(x=>x.id===ass.tId)?.name})`); } else r.push(''); }); });
-        aoa.push(r);
+    let aoa = [ ['ម៉ោងសរុប', 'ល.រ', 'ថ្នាក់', 'គ្រូបន្ទុកថ្នាក់'] ]; let row2 = ['', '', '', '']; DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { if(i===0) aoa[0].push(d.name); else aoa[0].push(''); row2.push(ts); }); }); aoa.push(row2);
+    state.classes.forEach((clsObj, idx) => { 
+        const cls = clsObj.name;
+        let totalH = state.assignments.filter(a => a.className === cls).reduce((sum, a) => sum + a.hours, 0); let hrTeacher = state.teachers.find(t => t.homeroomClass === cls); let hrName = hrTeacher ? hrTeacher.name : ''; let r = [totalH, idx + 1, cls, hrName]; 
+        DAYS.forEach(d => { state.timeSlots.forEach((ts, i) => { const aid = state.schedule[`${cls}_${d.id}_${i}`]; if(aid) { const ass = state.assignments.find(a=>a.id==aid); const uniqueStr = ass.tcode.split('-')[1]; r.push(`${state.subjects.find(x=>x.id===ass.subjId)?.code}${uniqueStr} (${state.teachers.find(x=>x.id===ass.tId)?.name})`); } else r.push(''); }); }); aoa.push(r); 
     });
     const ws = XLSX.utils.aoa_to_sheet(aoa); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Master Schedule"); XLSX.writeFile(wb, "Master_Schedule.xlsx");
 }
-
 function importMasterExcel(e) {
     const file = e.target.files[0]; if(!file) return; const r = new FileReader();
     r.onload = function(evt) {
         try {
-            const aoa = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]], {header: 1}); let newSch = {};
+            const aoa = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type: 'binary'}).Sheets[XLSX.read(evt.target.result, {type: 'binary'}).SheetNames[0]], {header: 1}); let newSch = {}; let errors=[];
             for(let rIdx=2; rIdx<aoa.length; rIdx++) {
-                const cls = aoa[rIdx][0]; if(!state.classes.includes(cls)) continue; let cIdx = 1;
+                const cls = aoa[rIdx][2]; if(!cls || !state.classes.find(c=>c.name===cls)) continue; let cIdx = 4;
                 DAYS.forEach(d => { state.timeSlots.forEach((ts, tIdx) => {
-                    const cell = aoa[rIdx][cIdx];
-                    if(cell && typeof cell === 'string') {
-                        const match = cell.match(/(.+?)\s*\((.+?)\)/);
-                        if(match) { const sCode = match[1].trim(); const tName = match[2].trim(); const ass = state.assignments.find(a => state.subjects.find(s=>s.id===a.subjId)?.code===sCode && state.teachers.find(t=>t.id===a.tId)?.name===tName && a.className===cls); if(ass) newSch[`${cls}_${d.id}_${tIdx}`] = ass.id; }
-                    } cIdx++;
+                    const cell = aoa[rIdx][cIdx]; if(cell && typeof cell === 'string') { const match = cell.match(/(.+?)\s*\((.+?)\)/); if(match) { 
+                        const fullCode = match[1].trim(); const tName = match[2].trim(); const codeMatch = fullCode.match(/^([A-Za-z]+)(\d*)$/);
+                        if(codeMatch) { const baseCode = codeMatch[1].toUpperCase(); const uniqueStr = codeMatch[2]; const sObj = state.subjects.find(s=>s.code.toUpperCase() === baseCode); if(sObj) { const internalTcode = `${sObj.id}-${uniqueStr}`; const ass = state.assignments.find(a => a.tcode===internalTcode && state.teachers.find(t=>t.id===a.tId)?.name===tName && a.className===cls); if(ass) newSch[`${cls}_${d.id}_${tIdx}`] = ass.id; else errors.push({'Row':rIdx+1, 'Error':'គ្មានចាត់តាំង', 'Description':`ថ្នាក់ ${cls} មិនមានចាត់តាំងគ្រូ ${tName} ទេ`}); } }
+                    } } cIdx++;
                 });});
-            }
-            state.schedule = newSch; renderMasterGrid(); Swal.fire('ជោគជ័យ', 'ទាញចូលរួចរាល់', 'success');
+            } state.schedule = newSch; resolveConflicts(); saveData(); renderMasterGrid(); Swal.fire('ជោគជ័យ', 'បញ្ចូលកាលវិភាគរួមរួចរាល់', 'success');
+            if(errors.length>0) downloadErrorReport(errors, "Master_Errors.xlsx");
         } catch(err) { Swal.fire('បរាជ័យ', 'បញ្ហា File', 'error'); }
     }; r.readAsBinaryString(file); e.target.value = '';
 }
 
-// --- Printing ---
-function renderIndividualDropdown() { const type = document.getElementById('print-type').value; document.getElementById('print-selector').innerHTML = (type==='class' ? state.classes.map(c => `<option value="${c}">ថ្នាក់ ${c}</option>`) : state.teachers.map(t => `<option value="${t.id}">${t.name}</option>`)).join(''); renderIndividualView(); }
+// ==========================================
+// 8. PRINTING 
+// ==========================================
+function renderIndividualDropdown() { const type = document.getElementById('print-type').value; document.getElementById('print-selector').innerHTML = (type==='class' ? state.classes.map(c => `<option value="${c.name}">ថ្នាក់ ${c.name}</option>`) : state.teachers.map(t => `<option value="${t.id}">${t.name}</option>`)).join(''); renderIndividualView(); }
 function renderIndividualView() { document.getElementById('print-canvas').innerHTML = `<div class="page-break">${generatePrintHtml(document.getElementById('print-type').value, document.getElementById('print-selector').value)}</div>`; }
-function printAll() { const type = document.getElementById('print-type').value; const list = type==='class' ? state.classes : state.teachers.map(t=>t.id); document.getElementById('print-canvas').innerHTML = list.map(v => `<div class="page-break">${generatePrintHtml(type, v)}</div>`).join(''); setTimeout(() => window.print(), 500); }
+function printAll() { const type = document.getElementById('print-type').value; const list = type==='class' ? state.classes.map(c=>c.name) : state.teachers.map(t=>t.id); document.getElementById('print-canvas').innerHTML = list.map(v => `<div class="page-break">${generatePrintHtml(type, v)}</div>`).join(''); setTimeout(() => window.print(), 500); }
+
 function generatePrintHtml(type, val) {
-    const s = state.schoolInfo; let logoHtml = s.logo ? `<img src="${s.logo}" style="height:70px; display:block; margin: 0 auto 5px auto;">` : ''; let sigHtml = s.signature ? `<img src="${s.signature}" style="height:70px; display:block; margin: 15px auto;">` : '<br><br><br>';
-    let html = `<div class="print-header font-moul text-blue-900 text-[14px]"><div class="text-center w-64 leading-relaxed">${logoHtml}${s.department}<br>${s.schoolName}</div><div class="text-center text-[16px] leading-relaxed">ព្រះរាជាណាចក្រកម្ពុជា<br>ជាតិ សាសនា ព្រះមហាក្សត្រ<br><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Ornament_of_Cambodia.svg/512px-Ornament_of_Cambodia.svg.png" style="width:100px; margin: 5px auto;"></div><div class="w-64"></div></div><div class="print-title"><h2 class="font-moul text-[22px] mb-2">កាលវិភាគសិក្សាប្រចាំសប្ដាហ៍</h2><p class="font-bold font-moul text-[16px]">${type==='class' ? 'ថ្នាក់ទី៖ '+val : 'គ្រូបង្រៀន៖ '+state.teachers.find(t=>t.id===val)?.name}</p><p class="text-[14px] font-bold mt-1">ឆ្នាំសិក្សា ${s.academicYear}</p></div><table class="print-table"><thead><tr><th style="width: 12%;">ម៉ោង</th>${DAYS.map(d => `<th>${d.name}</th>`).join('')}</tr></thead><tbody>`;
+    const s = state.schoolInfo; let logoHtml = s.logo ? `<img src="${s.logo}" style="height:65px; display:block; margin: 0 auto;">` : ''; let sigHtml = s.signature ? `<img src="${s.signature}" style="height:65px; display:block; margin: 10px auto;">` : '<br><br><br>';
+    let subTitle = type==='class' ? `ថ្នាក់ទី៖ <span style="color:red; font-family:Arial, sans-serif;">${val}</span>` : `គ្រូបង្រៀន៖ ${state.teachers.find(t=>t.id===val)?.name}`;
+    if(type==='class') { let hrTeacher = state.teachers.find(t => t.homeroomClass === val); if(hrTeacher) subTitle += ` <span style="font-size: 13px; font-family: var(--battambang); font-weight:normal; margin-left: 15px;">(គ្រូបន្ទុកថ្នាក់៖ ${hrTeacher.name})</span>`; }
+
+    let html = `<div class="print-header font-moul text-blue-900 text-[13px]"><div class="text-center w-64 leading-relaxed">${logoHtml}${s.department}<br>${s.schoolName}</div><div class="text-center text-[15px] leading-relaxed">ព្រះរាជាណាចក្រកម្ពុជា<br>ជាតិ សាសនា ព្រះមហាក្សត្រ<br><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Ornament_of_Cambodia.svg/512px-Ornament_of_Cambodia.svg.png" style="width:90px; margin: 3px auto;"></div><div class="w-64"></div></div><div class="print-title"><h2 class="font-moul text-[20px] mb-1">កាលវិភាគសិក្សាប្រចាំសប្ដាហ៍</h2><p class="font-bold font-moul text-[15px]">${subTitle}</p><p class="text-[13px] font-bold mt-1">ឆ្នាំសិក្សា ${s.academicYear}</p></div><table class="print-table"><thead><tr><th style="width: 10%;">ម៉ោង</th>${DAYS.map(d => `<th>${d.name}</th>`).join('')}</tr></thead><tbody>`;
+    
+    // Performance: Dictionaries
+    const tMap = {}; state.teachers.forEach(t => tMap[t.id] = t);
+    const sMap = {}; state.subjects.forEach(sbj => sMap[sbj.id] = sbj);
+
     state.timeSlots.forEach((time, ti) => {
-        if(ti === 5) html += `<tr style="border-top: 3px double #000;"><td colspan="7" class="font-moul bg-gray-50 text-[14px] py-2">ម៉ោងសម្រាកពេលរសៀល</td></tr>`;
-        html += `<tr><td class="font-moul text-[14px]">${time}</td>`;
+        if(ti === 5) html += `<tr><td colspan="7" class="font-moul bg-gray-50 text-[13px] py-1">ម៉ោងសម្រាកពេលរសៀល</td></tr>`;
+        html += `<tr><td class="font-moul text-[13px]">${time}</td>`;
         DAYS.forEach(d => {
             let cell = '';
-            if(type === 'class') { const aid = state.schedule[`${val}_${d.id}_${ti}`]; if(aid) { const ass = state.assignments.find(a=>a.id==aid); cell = `<div style="font-weight:bold; font-size:15px; margin-bottom:4px;">${state.subjects.find(x=>x.id===ass?.subjId)?.name}</div><div style="font-size:12px; color:#333; font-family:var(--battambang);">${state.teachers.find(x=>x.id===ass?.tId)?.name}</div>`; } } 
-            else { state.classes.forEach(cls => { const aid = state.schedule[`${cls}_${d.id}_${ti}`]; const ass = state.assignments.find(a=>a.id==aid); if(ass && ass.tId === val) cell = `<div style="font-size:12px; color:#333; margin-bottom:4px;">${state.subjects.find(x=>x.id===ass.subjId)?.name}</div><div style="font-weight:bold; font-size:16px;">ថ្នាក់ ${cls}</div>`; }); }
-            html += `<td>${cell}</td>`;
+            if(type === 'class') { 
+                const aid = state.schedule[`${val}_${d.id}_${ti}`]; 
+                if(aid) { 
+                    const ass = state.assignments.find(a=>a.id==aid); 
+                    cell = `<div style="font-weight:bold; font-size:14px; margin-bottom:3px; font-family:var(--battambang);">${sMap[ass?.subjId]?.name}</div><div style="font-size:11px; color:#333; font-family:var(--battambang);">${tMap[ass?.tId]?.name}</div>`; 
+                } else if(!isSlotAllowedForClass(val, d.id, ti)) {
+                    cell = `<div style="background:#f1f5f9; width:100%; height:100%;"></div>`;
+                }
+            } else { 
+                state.classes.forEach(clsObj => { 
+                    const cls = clsObj.name; const aid = state.schedule[`${cls}_${d.id}_${ti}`]; 
+                    const ass = state.assignments.find(a=>a.id==aid); 
+                    if(ass && ass.tId === val) cell = `<div style="font-size:11px; color:#333; margin-bottom:3px; font-family:var(--battambang);">${sMap[ass.subjId]?.name}</div><div style="font-weight:bold; font-size:15px; font-family:var(--battambang);">ថ្នាក់ <span style="color:red; font-family:Arial;">${cls}</span></div>`; 
+                }); 
+            }
+            html += `<td style="padding:0 !important;">${cell}</td>`;
         }); html += `</tr>`;
     });
-    html += `</tbody></table><div class="print-footer"><div class="print-footer-box"><p class="font-moul text-[14px] mb-2">បានឃើញ និងឯកភាព</p><p class="font-moul text-[14px]">នាយកសាលា</p>${sigHtml}<p class="font-moul text-[16px]">${s.principalName}</p></div><div class="print-footer-box"><p class="text-[14px] italic mb-2">ធ្វើនៅ....................., ថ្ងៃទី....... ខែ....... ឆ្នាំ២០២...</p><p class="font-moul text-[14px] mb-16">អ្នករៀបចំកាលវិភាគ</p><p class="font-bold">.........................................</p></div></div>`;
+    html += `</tbody></table><div class="print-footer"><div class="print-footer-box"><p class="font-moul text-[13px] mb-1">បានឃើញ និងឯកភាព</p><p class="font-moul text-[13px]">នាយកសាលា</p>${sigHtml}<p class="font-moul text-[15px]">${s.principalName}</p></div><div class="print-footer-box"><p class="text-[13px] italic mb-1">ធ្វើនៅ....................., ថ្ងៃទី....... ខែ....... ឆ្នាំ២០២...</p><p class="font-moul text-[13px] mb-12">អ្នករៀបចំកាលវិភាគ</p><p class="font-bold">.........................................</p></div></div>`;
     return html;
 }
 
-// ដំណើរការកម្មវិធីនៅពេលបើក
+// ==========================================
+// 9. OWNER PANEL
+// ==========================================
+let allSchoolsCache = [];
+async function loadOwnerData() {
+    const { data: schools } = await sb.from('schools').select('*').order('created_at', { ascending: false }); allSchoolsCache = schools || [];
+    document.getElementById('owner-school-list').innerHTML = allSchoolsCache.map(s => `<div class="p-3 bg-slate-50 border rounded-xl flex justify-between items-center"><span class="font-bold text-sm text-blue-900">${s.name} <br><span class="text-[10px] text-slate-400 font-mono">${s.id}</span></span></div>`).join('');
+    const { data: profiles } = await sb.from('profiles').select('*, schools(name)').neq('role', 'owner');
+    document.getElementById('owner-user-list').innerHTML = (profiles||[]).map(p => `<div class="p-4 bg-slate-50 border rounded-xl space-y-2"><div class="flex justify-between items-center border-b pb-2"><span class="font-bold text-sm text-slate-800">${p.email}</span><span class="text-xs font-bold px-2 py-1 rounded bg-${p.role==='admin'?'green':'slate'}-100 text-${p.role==='admin'?'green':'slate'}-700 uppercase">${p.role}</span></div><div class="flex gap-2 items-end"><div class="flex-1"><label class="text-[10px] font-bold text-slate-400">សាលារៀន</label><select id="sel-school-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="">-- អត់ទាន់មានសាលា --</option>${allSchoolsCache.map(s => `<option value="${s.id}" ${s.id===p.school_id?'selected':''}>${s.name}</option>`).join('')}</select></div><div class="w-24"><label class="text-[10px] font-bold text-slate-400">តួនាទី</label><select id="sel-role-${p.id}" class="w-full p-2 border rounded-lg text-xs font-bold outline-none"><option value="user" ${p.role==='user'?'selected':''}>User</option><option value="admin" ${p.role==='admin'?'selected':''}>Admin</option></select></div><button onclick="updateUserRole('${p.id}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Save</button></div></div>`).join('');
+    loadInviteCodes();
+}
+async function createSchool() { const { value: name } = await Swal.fire({ title: 'ឈ្មោះសាលាថ្មី', input: 'text', showCancelButton: true }); if(name) { await sb.from('schools').insert([{ name }]); loadOwnerData(); } }
+async function updateUserRole(pId) { const sId = document.getElementById(`sel-school-${pId}`).value; const role = document.getElementById(`sel-role-${pId}`).value; await sb.from('profiles').update({ role: role, school_id: sId || null }).eq('id', pId); Swal.fire({toast:true, position:'top-end', icon:'success', title:'បានកែប្រែ', showConfirmButton:false, timer:1500}); loadOwnerData(); }
+
+async function generateInviteCode() { const code = 'SMART-' + Math.random().toString(36).substr(2, 6).toUpperCase(); await sb.from('invite_codes').insert([{ code: code }]); loadInviteCodes(); }
+async function loadInviteCodes() { const { data } = await sb.from('invite_codes').select('*').order('created_at', { ascending: false }); document.getElementById('invite-codes-list').innerHTML = (data||[]).map(c => `<div class="p-2 border rounded flex justify-between items-center ${c.is_used ? 'bg-slate-100 opacity-50' : 'bg-orange-50 border-orange-200'}"><span class="font-mono text-sm font-bold text-${c.is_used ? 'slate-500' : 'orange-600'}">${c.code}</span><span class="text-[9px] ${c.is_used ? 'text-red-500' : 'text-green-500'}">${c.is_used ? 'ប្រើរួច' : 'ទំនេរ'}</span></div>`).join(''); }
+
 window.onload = () => { checkAuth(); };
 </script>
 </body>
